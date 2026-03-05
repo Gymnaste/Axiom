@@ -8,7 +8,7 @@ export default function ActivityLog() {
     const fetchLogs = async () => {
         try {
             const res = await portfolioAPI.getActivity();
-            setLogs(res.data || []);
+            setLogs(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
             console.error("Erreur lors de la récupération des logs d'activité:", error);
         } finally {
@@ -44,8 +44,8 @@ export default function ActivityLog() {
                         <div key={log.id} className="p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 hover:border-sky-500/30 transition-colors group">
                             <div className="flex justify-between items-start mb-1">
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${log.type === 'BUY' ? 'bg-green-500/20 text-green-400' :
-                                        log.type === 'SELL' ? 'bg-red-500/20 text-red-400' :
-                                            'bg-sky-500/20 text-sky-400'
+                                    log.type === 'SELL' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-sky-500/20 text-sky-400'
                                     }`}>
                                     {log.type}
                                 </span>
