@@ -38,6 +38,11 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
         f"Profil de risque actuel: {risk_profile}."
     )
 
+    # Sanitiser les messages pour éviter l'erreur "expected a string, got null"
+    for msg in messages:
+        if "content" in msg and msg["content"] is None:
+            msg["content"] = ""
+
     # Premier appel à l'IA avec context et tools
     response_msg = openai_service.get_tool_calling_response(messages, context)
 
