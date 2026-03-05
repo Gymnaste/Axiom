@@ -50,8 +50,8 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
     if isinstance(response_msg, dict):
         return {"response": response_msg.get("content", "Erreur IA")}
 
-    # Gestion de la boucle Tool Calling
-    if getattr(response_msg, 'tool_calls', None):
+    # Gestion de la boucle Tool Calling (Multi-tours)
+    while getattr(response_msg, 'tool_calls', None):
         # On ajoute la réponse de l'assistant à l'historique
         messages.append({
             "role": response_msg.role,
@@ -112,13 +112,13 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
         # Relance l'appel avec les résultats
         response_msg = openai_service.get_tool_calling_response(messages, context)
         if isinstance(response_msg, dict):
-            response_text = response_msg.get("content", "Erreur IA après outil")
-        else:
-            response_text = response_msg.content
+            return {"response": response_msg.get("content", "Erreur IA après outil")}
 
-    else:
-        response_text = response_msg.content
+    # Boucle terminée, réponse finale textuelle disponible
+    final_text = response_msg.content
+    if not final_text:
+        final_text = "Opération effectuée avec succès."
 
     return {
-        "response": response_text
+        "response": final_text
     }
