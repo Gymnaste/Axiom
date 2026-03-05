@@ -8,7 +8,19 @@ load_dotenv(override=True)
 logger = setup_logger("openai_service")
 
 AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if AI_ENABLED else None
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = None
+if AI_ENABLED:
+    if OPENAI_API_KEY:
+        try:
+            client = OpenAI(api_key=OPENAI_API_KEY)
+        except Exception as e:
+            logger.error(f"Erreur lors de l'initialisation du client OpenAI: {e}")
+            AI_ENABLED = False
+    else:
+        logger.warning("OPENAI_API_KEY manquante. L'IA sera désactivée.")
+        AI_ENABLED = False
 
 class OpenAIService:
     def __init__(self):

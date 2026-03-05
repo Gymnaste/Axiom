@@ -43,7 +43,7 @@ export default function Header({ onSearch, onOpenAccount, userProfile }) {
         finally { setRunning(false) }
     }
 
-    const pnl = totalValue != null && capital != null ? totalValue - 1000 : null
+    const pnl = totalValue != null && capital != null ? totalValue - 10000 : null
     const pnlColor = pnl == null ? '' : pnl >= 0 ? 'text-green-400' : 'text-red-400'
 
     return (
