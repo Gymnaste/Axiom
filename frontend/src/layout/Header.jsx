@@ -100,8 +100,8 @@ export default function Header({ onSearch, onOpenAccount, userProfile }) {
 
                             let ticker = searchInput.trim().toUpperCase();
 
-                            // Si c'est un nom d'entreprise (plus de 5 chars ou contient espace), demander à l'IA
-                            if (ticker.length > 5 || ticker.includes(' ')) {
+                            // Si c'est un nom d'entreprise (plus de 4 chars ou contient espace), demander à l'IA
+                            if (ticker.length > 4 || ticker.includes(' ')) {
                                 try {
                                     const res = await marketAPI.searchTicker(searchInput.trim());
                                     ticker = res.data.suggested_ticker;

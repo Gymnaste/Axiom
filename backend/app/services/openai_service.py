@@ -222,7 +222,9 @@ class OpenAIService:
         manual_map = {
             "APPLE": "AAPL", "MICROSOFT": "MSFT", "TESLA": "TSLA", "GOOGLE": "GOOGL", 
             "ALPHABET": "GOOGL", "AMAZON": "AMZN", "META": "META", "FACEBOOK": "META",
-            "NVIDIA": "NVDA", "NETFLIX": "NFLX", "BITCOIN": "BTC-USD", "ETH": "ETH-USD"
+            "NVIDIA": "NVDA", "NETFLIX": "NFLX", "BITCOIN": "BTC-USD", "ETH": "ETH-USD",
+            "TOTAL": "TTE.PA", "LVMH": "MC.PA", "AIRBUS": "AIR.PA", "RENAULT": "RNO.PA",
+            "BNP": "BNP.PA", "SOCIETE GENERALE": "GLE.PA", "ORANGE": "ORA.PA"
         }
         if q in manual_map: return manual_map[q]
 
