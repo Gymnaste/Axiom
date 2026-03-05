@@ -24,15 +24,21 @@ class NewsProvider:
         for url in RSS_FEEDS:
             try:
                 logger.info(f"Fetching news from {url}")
-                feed = feedparser.parse(url)
-                for entry in feed.entries[:max_articles]:
-                    articles.append({
-                        "title": entry.get("title", ""),
-                        "source": feed.feed.get("title", "Finance News"),
-                        "url": entry.get("link", ""),
-                        "summary": entry.get("description" if "description" in entry else "summary", ""),
-                        "published_at": entry.get("published", datetime.utcnow().isoformat())
-                    })
+                # Plus robuste : on utilise requests avec un User-Agent pour éviter d'être bloqué
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                response = requests.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    feed = feedparser.parse(response.text)
+                    for entry in feed.entries[:max_articles]:
+                        articles.append({
+                            "title": entry.get("title", ""),
+                            "source": feed.feed.get("title", "Finance News"),
+                            "url": entry.get("link", ""),
+                            "summary": entry.get("description" if "description" in entry else "summary", ""),
+                            "published_at": entry.get("published", datetime.utcnow().isoformat())
+                        })
+                else:
+                    logger.error(f"HTTP Error {response.status_code} on {url}")
             except Exception as e:
                 logger.error(f"Error fetching RSS {url}: {e}")
                 continue
