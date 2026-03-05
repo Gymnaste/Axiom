@@ -49,7 +49,12 @@ class OpenAIService:
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Erreur OpenAI : {e}")
-            return "Désolé, je rencontre une difficulté technique pour répondre à votre question pour le moment."
+            error_msg = str(e).lower()
+            if "insufficient_quota" in error_msg:
+                return "Erreur OpenAI : Vous n'avez plus de crédits sur votre compte OpenAI."
+            elif "invalid_api_key" in error_msg:
+                return "Erreur OpenAI : Votre clé API est invalide."
+            return f"Désolé, erreur technique IA ({type(e).__name__}). Vérifiez votre configuration OpenAI."
 
     def get_tool_calling_response(self, messages: list, context: str = ""):
         """Envoie l'historique des messages à OpenAI avec les outils définis."""
@@ -128,7 +133,12 @@ class OpenAIService:
             return response.choices[0].message
         except Exception as e:
             logger.error(f"Erreur OpenAI Tool Calling : {e}")
-            return {"role": "assistant", "content": "Désolé, erreur technique lors de l'analyse."}
+            error_msg = str(e).lower()
+            if "insufficient_quota" in error_msg:
+                return {"role": "assistant", "content": "Erreur OpenAI : Vous n'avez plus de crédits (quota dépassé)."}
+            elif "invalid_api_key" in error_msg:
+                return {"role": "assistant", "content": "Erreur OpenAI : Votre clé API est invalide."}
+            return {"role": "assistant", "content": f"Désolé, erreur technique lors de l'analyse ({type(e).__name__})."}
 
     def analyze_market_signal(self, symbol: str, indicators: dict, sentiment: float, portfolio_context: str) -> dict:
         """Demande à l'IA d'analyser le marché et de retourner une décision au format JSON."""
