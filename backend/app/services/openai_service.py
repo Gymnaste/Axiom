@@ -24,7 +24,7 @@ if AI_ENABLED:
 
 class OpenAIService:
     def __init__(self):
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
 
     def get_chat_response(self, message: str, context: str = ""):
         if not AI_ENABLED:
@@ -231,7 +231,8 @@ class OpenAIService:
                 max_tokens=10
             )
             return response.choices[0].message.content.strip().upper()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Erreur suggestion ticker OpenAI : {e}")
             return query.upper()
 
     def get_autonomous_decision(self, ticker: str, history: list, news: list, balance: float) -> dict:
