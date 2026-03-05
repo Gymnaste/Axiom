@@ -40,7 +40,7 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
 
     # Sanitiser les messages pour éviter l'erreur "expected a string, got null"
     for msg in messages:
-        if "content" in msg and msg["content"] is None:
+        if msg.get("content") is None:
             msg["content"] = ""
 
     # Premier appel à l'IA avec context et tools
