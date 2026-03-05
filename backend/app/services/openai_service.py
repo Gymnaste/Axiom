@@ -24,7 +24,7 @@ if AI_ENABLED:
 
 class OpenAIService:
     def __init__(self):
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        self.model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
     def get_chat_response(self, message: str, context: str = ""):
         if not AI_ENABLED:
@@ -215,8 +215,19 @@ class OpenAIService:
 
     def get_ticker_suggestion(self, query: str) -> str:
         """Utilise l'IA pour mapper un nom d'entreprise ou une recherche vers un ticker valide."""
+        if not query: return ""
+        q = query.strip().upper()
+        
+        # Mapping manuel de base en cas d'échec IA ou pour vitesse
+        manual_map = {
+            "APPLE": "AAPL", "MICROSOFT": "MSFT", "TESLA": "TSLA", "GOOGLE": "GOOGL", 
+            "ALPHABET": "GOOGL", "AMAZON": "AMZN", "META": "META", "FACEBOOK": "META",
+            "NVIDIA": "NVDA", "NETFLIX": "NFLX", "BITCOIN": "BTC-USD", "ETH": "ETH-USD"
+        }
+        if q in manual_map: return manual_map[q]
+
         if not AI_ENABLED:
-            return query.upper()
+            return q
         try:
             prompt = (
                 f"L'utilisateur recherche une action avec ce texte : '{query}'.\n"
@@ -233,7 +244,7 @@ class OpenAIService:
             return response.choices[0].message.content.strip().upper()
         except Exception as e:
             logger.error(f"Erreur suggestion ticker OpenAI : {e}")
-            return query.upper()
+            return q
 
     def get_autonomous_decision(self, ticker: str, history: list, news: list, balance: float) -> dict:
         """
