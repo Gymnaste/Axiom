@@ -54,7 +54,7 @@ class OpenAIService:
                 return "Erreur OpenAI : Vous n'avez plus de crédits sur votre compte OpenAI."
             elif "invalid_api_key" in error_msg:
                 return "Erreur OpenAI : Votre clé API est invalide."
-            return f"Désolé, erreur technique IA ({type(e).__name__}). Vérifiez votre configuration OpenAI."
+            return f"Désolé, erreur technique IA ({type(e).__name__}) : {str(e)}. Vérifiez votre configuration OpenAI."
 
     def get_tool_calling_response(self, messages: list, context: str = ""):
         """Envoie l'historique des messages à OpenAI avec les outils définis."""
@@ -138,7 +138,7 @@ class OpenAIService:
                 return {"role": "assistant", "content": "Erreur OpenAI : Vous n'avez plus de crédits (quota dépassé)."}
             elif "invalid_api_key" in error_msg:
                 return {"role": "assistant", "content": "Erreur OpenAI : Votre clé API est invalide."}
-            return {"role": "assistant", "content": f"Désolé, erreur technique lors de l'analyse ({type(e).__name__})."}
+            return {"role": "assistant", "content": f"Désolé, erreur technique lors de l'analyse ({type(e).__name__}) : {str(e)}."}
 
     def analyze_market_signal(self, symbol: str, indicators: dict, sentiment: float, portfolio_context: str) -> dict:
         """Demande à l'IA d'analyser le marché et de retourner une décision au format JSON."""
@@ -151,7 +151,8 @@ class OpenAIService:
                 "Ton rôle est d'analyser les données de marché qu'on te fournit et de renvoyer UNIQUEMENT un objet JSON valide. "
                 "Le format JSON doit obéir à ce schéma exact : \n"
                 '{"recommendation": "BUY" | "SELL" | "HOLD", "confidence": float (entre 0.0 et 1.0), "justification": "string courte", "take_profit": float, "stop_loss": float}'
-                "\nSi la recommandation est BUY ou SELL, tu DOIS fournir un take_profit et un stop_loss logiques. Sinon, mets-les à 0."
+                "\nSi la recommandation est BUY ou SELL, tu DOIS fournir un take_profit et un stop_loss logiques. Sinon, mets-les à 0. "
+                "IMPORTANT: Réponds uniquement avec du JSON."
             )
 
             user_message = (

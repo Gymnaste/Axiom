@@ -44,21 +44,11 @@ export default function Chatbot() {
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="w-16 h-16 bg-gray-950/20 backdrop-blur-md relative flex items-center justify-center transition-all hover:scale-110 group animate-pulse-glow"
-                    style={{
-                        clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-                        boxShadow: '0 0 20px hsl(187,100%,50%,0.3)',
-                    }}
+                    className="w-14 h-14 bg-sky-500 rounded-full shadow-[0_0_20px_rgba(56,189,248,0.4)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 group animate-pulse-glow border-2 border-white/20"
                 >
-                    {/* Border effect using an inner div */}
-                    <div
-                        className="absolute inset-[2px] bg-gray-900 flex items-center justify-center overflow-hidden"
-                        style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}
-                    >
-                        <img src="/logo-axiom-symbol.png" alt="Axiom Chat" className="w-full h-full object-cover scale-125" />
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                        <img src="/logo-axiom-symbol.png" alt="Axiom Chat" className="w-full h-full object-contain" />
                     </div>
-                    {/* Outer glow overlay */}
-                    <div className="absolute inset-0 border-2 border-[hsl(187,100%,50%)]/50 opacity-40 group-hover:opacity-100 transition-opacity" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
                 </button>
             )}
 

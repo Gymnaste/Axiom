@@ -72,15 +72,31 @@ class MarketProvider:
         """Récupère les informations de base de l'entreprise via yfinance."""
         try:
             ticker = yf.Ticker(symbol)
-            info = ticker.info
-            return {
-                "symbol": symbol,
-                "name": info.get("shortName", symbol),
-                "sector": info.get("sector", "Inconnu"),
-                "industry": info.get("industry", "Inconnu"),
-                "marketCap": info.get("marketCap", None),
-                "summary": info.get("longBusinessSummary", "Aucune description disponible.")
-            }
+            # ticker.info est très lent et plante souvent sur les serveurs distants
+            # On essaie de récupérer le nom via fast_info d'abord
+            fast = ticker.fast_info
+            name = fast.get("shortName") or symbol
+            
+            # Si on veut vraiment les détails, on tente info avec un timeout implicite court
+            try:
+                info = ticker.info
+                name = info.get("shortName", name)
+                return {
+                    "symbol": symbol,
+                    "name": name,
+                    "sector": info.get("sector", "Marché financier"),
+                    "industry": info.get("industry", "Finance"),
+                    "marketCap": info.get("marketCap", None),
+                    "summary": info.get("longBusinessSummary", "Données descriptives temporairement indisponibles.")
+                }
+            except:
+                return {
+                    "symbol": symbol,
+                    "name": name,
+                    "sector": "Marché financier",
+                    "industry": "Finance",
+                    "summary": f"Informations sur {symbol}."
+                }
         except Exception as e:
             logger.error(f"Error fetch info {symbol}: {e}")
             return {"symbol": symbol, "name": symbol, "error": str(e)}
