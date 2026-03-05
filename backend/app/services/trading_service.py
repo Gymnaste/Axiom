@@ -9,6 +9,7 @@ logger = setup_logger("trading_service")
 
 class TradingService:
     _discovered_symbols = [] # Cache de classe pour persistance simple
+    _cached_signals = {} # Structure : { "user_id": [ { signal1 }, { signal2 } ] }
 
     def __init__(self):
         self.market = MarketProvider()
@@ -57,7 +58,16 @@ class TradingService:
                 "current_price": ind.get("current_price"),
                 "rsi": ind.get("rsi"), "sma20": ind.get("sma20"), "sma50": ind.get("sma50")
             })
+            
+        # Mise en cache des signaux générés
+        if user_id:
+            TradingService._cached_signals[user_id] = signals
+            
         return signals
+
+    def get_user_signals(self, user_id):
+        """Retourne les signaux mis en cache pour éviter de spammer OpenAI."""
+        return TradingService._cached_signals.get(user_id, [])
 
     def run_trading_cycle(self, db, user_id: str = None):
         if not user_id:

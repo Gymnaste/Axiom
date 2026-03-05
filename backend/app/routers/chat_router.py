@@ -55,7 +55,7 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
         # On ajoute la réponse de l'assistant à l'historique
         messages.append({
             "role": response_msg.role,
-            "content": response_msg.content,
+            "content": response_msg.content if response_msg.content is not None else "",
             "tool_calls": [
                 {
                     "id": t.id,
