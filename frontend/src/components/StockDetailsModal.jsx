@@ -59,6 +59,28 @@ export default function StockDetailsModal({ symbol, onClose }) {
         setTimeout(() => setActionMsg(null), 4000)
     }
 
+    const handleBuy = async () => {
+        if (!buyQty || parseFloat(buyQty) <= 0) return showMsg('Quantité invalide', true)
+        setActionLoading(true)
+        try {
+            const res = await portfolioAPI.buy(
+                symbol,
+                parseFloat(buyQty),
+                buySL ? parseFloat(buySL) : null,
+                buyTP ? parseFloat(buyTP) : null
+            )
+            if (res.data.success) {
+                showMsg(`✅ Acheté ${res.data.quantity} unités pour $${res.data.cost?.toFixed(2)}`)
+                fetchData()
+            } else {
+                showMsg(res.data.error, true)
+            }
+        } catch (e) {
+            showMsg(e.response?.data?.detail || 'Erreur réseau', true)
+        }
+        setActionLoading(false)
+    }
+
     const handleSell = async () => {
         if (!openTrade) return
         if (!confirm(`Vendre ${openTrade.quantity} unités de ${symbol} au prix actuel ?`)) return

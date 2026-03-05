@@ -4,7 +4,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from app.core.logger import setup_logger
 
-load_dotenv()
+load_dotenv(override=True)
 logger = setup_logger("openai_service")
 
 AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
@@ -126,9 +126,10 @@ class OpenAIService:
             prompt = (
                 "Tu es un analyste financier expert. Voici les dernières actualités mondiales du marché financier :\n"
                 f"{news_summary}\n\n"
-                "Identifie 3 entreprises (petites ou grandes) très prometteuses ou très risquées dont on parle actuellement "
+                "Identifie 3 entreprises très prometteuses ou très risquées dont on parle actuellement "
                 "et qui pourraient représenter une excellente opportunité de trade à court terme. "
-                "Tu DOIS retourner UNIQUEMENT des TICKERS OFFICIELS VALIDES sur Yahoo Finance (ex: GTLB et non GITLAB, META et non FACEBOOK). "
+                "IMPORTANT : Propose un spectre TRÈS LARGE d'actions (Small caps, Mid caps, et Large caps). Ne te limite pas aux GAFAM ou aux géants technologiques. Cherche des pépites sur tout le marché. "
+                "Tu DOIS retourner UNIQUEMENT des TICKERS OFFICIELS VALIDES sur Yahoo Finance (ex: GTLB et non GITLAB). "
                 "Retourne UNIQUEMENT une liste JSON de ces symboles boursiers sous ce format exact : "
                 '{"symbols": ["AAPL", "NVDA", "PLTR"]}'
             )
