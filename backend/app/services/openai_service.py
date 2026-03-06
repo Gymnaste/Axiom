@@ -25,7 +25,7 @@ if AI_ENABLED:
 class OpenAIService:
     def __init__(self):
         env_model = os.getenv("OPENAI_MODEL", "").strip()
-        self.model = env_model if env_model else "gpt-3.5-turbo"
+        self.model = env_model if env_model else "gpt-4o-mini"
 
     def get_chat_response(self, message: str, context: str = ""):
         if not AI_ENABLED:
