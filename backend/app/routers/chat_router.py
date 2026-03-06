@@ -9,11 +9,24 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.openai_service import OpenAIService
 from app.services.portfolio_service import PortfolioService
+from app.services.news_service import NewsService
 from app.core.auth_deps import get_current_user_id
+from app.database import get_db, ChatMessage
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 openai_service = OpenAIService()
 portfolio_service = PortfolioService()
+news_service = NewsService()
+
+@router.get("/history")
+def get_chat_history(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    """Récupère l'historique complet des messages pour l'utilisateur."""
+    messages = db.query(ChatMessage).filter(ChatMessage.user_id == user_id).order_by(ChatMessage.timestamp.asc()).all()
+    return [{
+        "role": m.role,
+        "content": m.content,
+        "timestamp": m.timestamp
+    } for m in messages]
 
 import json
 
@@ -23,6 +36,13 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
     Communique avec Axiom via OpenAI.
     Supporte le chat avec historique et l'appel d'outils (Tool Calling).
     """
+    # 1. Sauvegarder le dernier message de l'utilisateur s'il n'est pas déjà en base
+    if messages and messages[-1]["role"] == "user":
+        last_msg = messages[-1]
+        new_user_msg = ChatMessage(user_id=user_id, role="user", content=last_msg["content"])
+        db.add(new_user_msg)
+        db.commit()
+
     summary = portfolio_service.get_portfolio_summary(db, user_id)
     open_positions = summary['positions_ouvertes']
 
@@ -101,6 +121,16 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
                     else:
                         tool_result = {"success": False, "error": f"Aucune position ouverte trouvée pour {ticker}."}
 
+            elif function_name == "get_news":
+                ticker = arguments.get("ticker", "").upper()
+                if ticker:
+                    news = portfolio_service.market.get_ticker_news(ticker)
+                    tool_result = {"ticker": ticker, "news": news}
+                else:
+                    news_items = news_service.get_recent_news(db, limit=10)
+                    news = [{"title": n.title, "source": n.source, "sentiment": n.sentiment_score} for n in news_items]
+                    tool_result = {"general_news": news}
+
             # On ajoute le résultat de l'outil à l'historique
             messages.append({
                 "role": "tool",
@@ -118,6 +148,11 @@ def chat_with_bot(messages: list = Body(..., embed=True), db: Session = Depends(
     final_text = response_msg.content
     if not final_text:
         final_text = "Opération effectuée avec succès."
+
+    # 2. Sauvegarder la réponse de l'assistant
+    new_bot_msg = ChatMessage(user_id=user_id, role="assistant", content=final_text)
+    db.add(new_bot_msg)
+    db.commit()
 
     return {
         "response": final_text

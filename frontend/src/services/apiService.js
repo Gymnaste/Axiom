@@ -74,6 +74,7 @@ export const marketAPI = {
 
 export const chatAPI = {
     send: (messages) => API.post('/chat', { messages }),
+    getHistory: () => API.get('/chat/history'),
 }
 
 export default API

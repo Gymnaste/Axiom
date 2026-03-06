@@ -2,8 +2,9 @@ import asyncio
 import json
 from datetime import datetime
 from sqlalchemy.orm import Session
-from app.database import SessionLocal, Trade, Portfolio, ActivityLog, NewsItem
+from app.database import SessionLocal, Trade, Portfolio, ActivityLog, NewsItem, ChatMessage
 from app.providers.market_provider import MarketProvider
+from app.domain.market.indicators import compute_all_indicators
 from app.services.openai_service import OpenAIService
 from app.core.logger import setup_logger
 
@@ -45,6 +46,7 @@ class AutonomousTradingAgent:
 
             for user_portfolio in all_portfolios:
                 logger.info(f"--- Nouveau cycle d'analyse pour {user_portfolio.user_id} (Capital: ${user_portfolio.capital:.2f}) ---")
+                cycle_results = []
 
                 # 1. Étendre la liste des tickers via la découverte IA (basée sur les news globales)
                 try:
@@ -97,11 +99,13 @@ class AutonomousTradingAgent:
                             continue # Passer au ticker suivant
                             
                     # 4. Récupérer données techniques et news pour l'IA
+                    df = self.market_provider.get_historical_data(ticker_symbol, period="1mo")
+                    if df.empty:
+                        continue
+                    
+                    indicators = compute_all_indicators(df)
                     history = self.market_provider.get_stock_history(ticker_symbol, period="5d")
                     news = self.market_provider.get_ticker_news(ticker_symbol)
-                    
-                    if not history:
-                        continue
 
                     # 5. Récupérer l'historique de performance pour l'apprentissage
                     from app.repositories.portfolio_repository import TradeRepository
@@ -116,6 +120,12 @@ class AutonomousTradingAgent:
                     decision = self.openai_service.get_autonomous_decision(
                         ticker_symbol, history, news, user_portfolio.capital, performance_history=perf_history
                     )
+                    
+                    cycle_results.append({
+                        "symbol": ticker_symbol,
+                        "action": decision.get("action"),
+                        "reasoning": decision.get("reasoning")
+                    })
 
                     action = decision.get("action", "HOLD")
                     reasoning = decision.get("reasoning", "")
@@ -176,6 +186,23 @@ class AutonomousTradingAgent:
                     
                     else: # HOLD
                         logger.info(f"[AUTONOMOUS] Scan {ticker_symbol} ({user_portfolio.user_id}) : Aucun signal fort (HOLD).")
+
+                # 7. Générer et sauvegarder le compte-rendu pour le chatbot
+                if cycle_results:
+                    try:
+                        report_text = self.openai_service.get_cycle_report_summary(cycle_results)
+                        if report_text:
+                            # Sauvegarder dans ChatMessage
+                            new_msg = ChatMessage(
+                                user_id=user_portfolio.user_id,
+                                role="assistant",
+                                content=f"🤖 **Rapport de cycle autonome** :\n{report_text}"
+                            )
+                            db.add(new_msg)
+                            db.commit()
+                            logger.info(f"Rapport de cycle envoyé au chatbot pour {user_portfolio.user_id}")
+                    except Exception as e:
+                        logger.error(f"Erreur lors de la publication du rapport : {e}")
 
         finally:
             db.close()

@@ -120,6 +120,22 @@ class OpenAIService:
                         "required": ["ticker", "action", "amount"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_news",
+                    "description": "Récupère les dernières actualités financières. Peut être filtré par ticker.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "ticker": {
+                                "type": "string",
+                                "description": "Le ticker boursier optionnel (ex: AAPL) pour des news spécifiques."
+                            }
+                        }
+                    }
+                }
             }
         ]
 
@@ -263,10 +279,10 @@ class OpenAIService:
             system_prompt = (
                 "Tu es le gestionnaire de fonds principal de Axiom. "
                 "Ton objectif est de maximiser les profits tout en gérant strictement le risque. "
-                "Tu reçois des données techniques (OHLC), les dernières news, et ton historique récent. \n"
+                "Tu reçois des données techniques (OHLC), les indicateurs techniques (RSI, SMA, EMA), "
+                "les dernières news, et ton historique récent. \n"
                 f"{perf_context}"
-                "\nAnalyses tes erreurs passées pour ne pas les reproduire. Si tu as subi des pertes sur des trades similaires, "
-                "sois plus prudent ou ajuste tes seuils de Stop Loss et Take Profit.\n"
+                "\nAnalyses tes erreurs passées pour ne pas les reproduire. Analyse la COMBINAISON des courbes (techniques) et du marché (news). "
                 "Règles strictes :\n"
                 "1. Investissement max : 5% du balance actuel par trade.\n"
                 "2. Réponds UNIQUEMENT en JSON structuré.\n"
@@ -277,16 +293,16 @@ class OpenAIService:
                 '  "amount_pct": float (0.0 à 0.05),\n'
                 '  "stop_loss": float,\n'
                 '  "take_profit": float,\n'
-                '  "reasoning": "explication détaillée du choix incluant une auto-critique si nécessaire"\n'
+                '  "reasoning": "explication de l\'analyse technique (courbes) et fondamentale (news)"\n'
                 "}"
             )
 
             user_message = (
                 f"--- DONNÉES POUR {ticker} ---\n"
                 f"Balance actuel : ${balance:.2f}\n"
-                f"Historique récent (OHLC) : {json.dumps(history[-20:])}\n"
+                f"Historique récent (OHLC) : {json.dumps(history[-10:])}\n"
                 f"Dernières news : {json.dumps(news)}\n\n"
-                "Quelle est ta décision ?"
+                "Quelle est ta décision basée sur les courbes et l'actualité ?"
             )
 
             response = client.chat.completions.create(
@@ -304,3 +320,27 @@ class OpenAIService:
         except Exception as e:
             logger.error(f"Erreur get_autonomous_decision pour {ticker}: {e}")
             return {"action": "HOLD", "reasoning": f"Erreur technique: {str(e)}"}
+
+    def get_cycle_report_summary(self, analysis_results: list) -> str:
+        """Génère un résumé global du cycle d'analyse pour le chatbot."""
+        if not AI_ENABLED or not analysis_results:
+            return ""
+        try:
+            prompt = (
+                "Tu es Axiom. Tu viens de terminer un cycle d'analyse autonome du marché. "
+                "Voici les résultats de tes analyses pour différents tickers :\n"
+                f"{json.dumps(analysis_results)}\n\n"
+                "Rédige un compte-rendu très court (3-4 phrases) et professionnel pour l'utilisateur. "
+                "Mentionne les actions entreprises (achats/ventes) et la tendance générale observée sur les courbes et news. "
+                "Sois direct et encourageant."
+            )
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=200
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"Erreur génération rapport cycle : {e}")
+            return "Cycle d'analyse terminé. Le marché a été passé en revue et les ajustements nécessaires ont été effectués."

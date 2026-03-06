@@ -96,6 +96,17 @@ class NewsItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ChatMessage(Base):
+    """Historique des messages du chatbot."""
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(100), nullable=False, index=True)
+    role = Column(String(20), nullable=False)  # user | assistant
+    content = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+
 # ─────────────────────────────────────────────────────────────
 # INITIALISATION
 # ─────────────────────────────────────────────────────────────

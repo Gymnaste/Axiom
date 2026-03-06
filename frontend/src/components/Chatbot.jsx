@@ -14,9 +14,28 @@ export default function Chatbot() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
+    const fetchHistory = async () => {
+        try {
+            const res = await chatAPI.getHistory()
+            if (res.data && res.data.length > 0) {
+                setMessages(res.data)
+            }
+        } catch (error) {
+            console.error("Error fetching chat history:", error)
+        }
+    }
+
+    useEffect(() => {
+        fetchHistory()
+        // Rafraîchir toutes les 5 minutes pour voir les nouveaux rapports
+        const interval = setInterval(fetchHistory, 300000)
+        return () => clearInterval(interval)
+    }, [])
+
     useEffect(() => {
         scrollToBottom()
     }, [messages])
+
     const handleSend = async () => {
         if (!input.trim()) return
 
