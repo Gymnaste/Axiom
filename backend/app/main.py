@@ -9,6 +9,8 @@ from app.routers import portfolio_router, signal_router, news_router, system_rou
 from app.services.trading_agent import trading_agent
 import asyncio
 
+trading_service = TradingService()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
