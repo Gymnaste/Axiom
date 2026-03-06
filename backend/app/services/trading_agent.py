@@ -85,6 +85,8 @@ class AutonomousTradingAgent:
                             existing_trade.status = "CLOSED"
                             existing_trade.exit_price = price
                             existing_trade.exit_date = datetime.utcnow()
+                            trade_pnl = (price - existing_trade.entry_price) * existing_trade.quantity
+                            existing_trade.pnl = trade_pnl
                             proceeds = price * existing_trade.quantity
                             user_portfolio.capital += proceeds
                             db.commit()
@@ -101,9 +103,18 @@ class AutonomousTradingAgent:
                     if not history:
                         continue
 
-                    # 5. Demander à l'IA
+                    # 5. Récupérer l'historique de performance pour l'apprentissage
+                    from app.repositories.portfolio_repository import TradeRepository
+                    trade_repo = TradeRepository()
+                    closed_trades = trade_repo.get_closed_trades(db, user_portfolio.user_id, limit=10)
+                    perf_history = ""
+                    for ct in closed_trades:
+                        status_str = "PROFIT" if (ct.pnl or 0) > 0 else "PERTE"
+                        perf_history += f"- {ct.symbol}: {status_str} (${ct.pnl:.2f}), Jusitification: {ct.justification}\n"
+
+                    # 6. Demander à l'IA
                     decision = self.openai_service.get_autonomous_decision(
-                        ticker_symbol, history, news, user_portfolio.capital
+                        ticker_symbol, history, news, user_portfolio.capital, performance_history=perf_history
                     )
 
                     action = decision.get("action", "HOLD")

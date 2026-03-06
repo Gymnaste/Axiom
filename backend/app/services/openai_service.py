@@ -249,19 +249,24 @@ class OpenAIService:
             logger.error(f"Erreur suggestion ticker OpenAI : {e}")
             return q
 
-    def get_autonomous_decision(self, ticker: str, history: list, news: list, balance: float) -> dict:
+    def get_autonomous_decision(self, ticker: str, history: list, news: list, balance: float, performance_history: str = "") -> dict:
         """
         Analyse les données OHLC et les news pour prendre une décision de trading 100% autonome.
+        Prend en compte l'historique de performance pour ne pas répéter les erreurs passées.
         """
         if not AI_ENABLED:
             return {"action": "HOLD", "reasoning": "IA désactivée"}
 
         try:
+            perf_context = f"\n--- TON HISTORIQUE DE PERFORMANCE RÉCENT ---\n{performance_history}\n" if performance_history else ""
+            
             system_prompt = (
                 "Tu es le gestionnaire de fonds principal de Axiom. "
                 "Ton objectif est de maximiser les profits tout en gérant strictement le risque. "
-                "Tu reçois des données techniques (OHLC) et les dernières news. "
-                "Tu dois décider si une opportunité existe. \n"
+                "Tu reçois des données techniques (OHLC), les dernières news, et ton historique récent. \n"
+                f"{perf_context}"
+                "\nAnalyses tes erreurs passées pour ne pas les reproduire. Si tu as subi des pertes sur des trades similaires, "
+                "sois plus prudent ou ajuste tes seuils de Stop Loss et Take Profit.\n"
                 "Règles strictes :\n"
                 "1. Investissement max : 5% du balance actuel par trade.\n"
                 "2. Réponds UNIQUEMENT en JSON structuré.\n"
@@ -272,7 +277,7 @@ class OpenAIService:
                 '  "amount_pct": float (0.0 à 0.05),\n'
                 '  "stop_loss": float,\n'
                 '  "take_profit": float,\n'
-                '  "reasoning": "explication détaillée du choix"\n'
+                '  "reasoning": "explication détaillée du choix incluant une auto-critique si nécessaire"\n'
                 "}"
             )
 

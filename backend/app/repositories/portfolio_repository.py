@@ -71,6 +71,12 @@ class TradeRepository:
     def get_open_trades(self, db: Session, user_id: str):
         return db.query(Trade).filter(Trade.user_id == user_id, Trade.status == "OPEN").all()
 
+    def get_closed_trades(self, db: Session, user_id: str, limit: int = 10):
+        return db.query(Trade).filter(
+            Trade.user_id == user_id, 
+            Trade.status == "CLOSED"
+        ).order_by(Trade.exit_date.desc()).limit(limit).all()
+
     def get_all_trades(self, db: Session, user_id: str):
         return db.query(Trade).filter(Trade.user_id == user_id).order_by(Trade.entry_date.desc()).all()
 
