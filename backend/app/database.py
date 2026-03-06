@@ -10,11 +10,18 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from app.config import DATABASE_URL
 
-# Engine et session
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+# Engine et session (Fix pour Railway/Heroku postgres:// -> postgresql://)
+parsed_url = DATABASE_URL
+if parsed_url.startswith("postgres://"):
+    parsed_url = parsed_url.replace("postgres://", "postgresql://", 1)
+
+# Configuration de l'Engine adaptée au moteur
+is_sqlite = parsed_url.startswith("sqlite")
+engine_args = {}
+if is_sqlite:
+    engine_args["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(parsed_url, **engine_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
