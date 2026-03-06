@@ -67,17 +67,41 @@ class AutonomousTradingAgent:
                         Trade.symbol == ticker_symbol,
                         Trade.status == "OPEN"
                     ).first()
-                    if existing_trade:
+                    
+                    price = self.market_provider.get_current_price(ticker_symbol)
+                    if not price:
                         continue
 
-                    # 3. Récupérer données techniques et news
+                    # 3. Vérification SL/TP si position ouverte
+                    if existing_trade:
+                        closed_reason = None
+                        if existing_trade.take_profit and price >= existing_trade.take_profit:
+                            closed_reason = "Take Profit atteint"
+                        elif existing_trade.stop_loss and price <= existing_trade.stop_loss:
+                            closed_reason = "Stop Loss atteint"
+                            
+                        if closed_reason:
+                            # Fermer la position (logique simplifiée répliquant portfolio_service.close_position)
+                            existing_trade.status = "CLOSED"
+                            existing_trade.exit_price = price
+                            existing_trade.exit_date = datetime.utcnow()
+                            proceeds = price * existing_trade.quantity
+                            user_portfolio.capital += proceeds
+                            db.commit()
+                            
+                            msg = f"Axiom a fermé {ticker_symbol} au prix de ${price:.2f} ({closed_reason})"
+                            self.log_activity(db, user_portfolio.user_id, msg, "SELL")
+                            logger.info(f"[AUTONOMOUS] VENTE (Auto-close) de {ticker_symbol} pour {user_portfolio.user_id} : {closed_reason}")
+                            continue # Passer au ticker suivant
+                            
+                    # 4. Récupérer données techniques et news pour l'IA
                     history = self.market_provider.get_stock_history(ticker_symbol, period="5d")
                     news = self.market_provider.get_ticker_news(ticker_symbol)
                     
                     if not history:
                         continue
 
-                    # 4. Demander à l'IA
+                    # 5. Demander à l'IA
                     decision = self.openai_service.get_autonomous_decision(
                         ticker_symbol, history, news, user_portfolio.capital
                     )
@@ -86,14 +110,17 @@ class AutonomousTradingAgent:
                     reasoning = decision.get("reasoning", "")
 
                     if action == "BUY":
+                        if existing_trade:
+                            logger.info(f"[AUTONOMOUS] Signal d'ACHAT ignoré car position déjà ouverte pour {ticker_symbol} ({user_portfolio.user_id}).")
+                            continue
+                            
                         amount_pct = decision.get("amount_pct", 0.02)
                         amount_to_invest = user_portfolio.capital * amount_pct
                         
                         # Vérification sécurité (max 5%)
                         amount_to_invest = min(amount_to_invest, user_portfolio.capital * 0.05)
                         
-                        price = self.market_provider.get_current_price(ticker_symbol)
-                        if price and amount_to_invest > 10: # Minimum $10
+                        if amount_to_invest > 10: # Minimum $10
                             qty = amount_to_invest / price
                             
                             # Créer le trade
@@ -115,13 +142,26 @@ class AutonomousTradingAgent:
                             db.add(new_trade)
                             db.commit()
 
-                            # Logger l'activité (BUY uniquement dans le dashboard)
+                            # Logger l'activité
                             msg = f"Axiom a acheté {ticker_symbol} (${amount_to_invest:.2f}) : {reasoning}"
                             self.log_activity(db, user_portfolio.user_id, msg, "BUY")
                             logger.info(f"[AUTONOMOUS] ACHAT de {ticker_symbol} pour {user_portfolio.user_id} : {reasoning}")
 
                     elif action == "SELL":
-                        logger.info(f"[AUTONOMOUS] Signal de VENTE pour {ticker_symbol} mais pas de position à fermer pour {user_portfolio.user_id}.")
+                        if existing_trade:
+                            # L'IA a décidé de vendre la position ouverte
+                            existing_trade.status = "CLOSED"
+                            existing_trade.exit_price = price
+                            existing_trade.exit_date = datetime.utcnow()
+                            proceeds = price * existing_trade.quantity
+                            user_portfolio.capital += proceeds
+                            db.commit()
+                            
+                            msg = f"Axiom a vendu {ticker_symbol} sur décision de l'IA (${proceeds:.2f}) : {reasoning}"
+                            self.log_activity(db, user_portfolio.user_id, msg, "SELL")
+                            logger.info(f"[AUTONOMOUS] VENTE (Décision IA) de {ticker_symbol} pour {user_portfolio.user_id} : {reasoning}")
+                        else:
+                            logger.info(f"[AUTONOMOUS] Signal de VENTE ignoré car aucune position ouverte pour {ticker_symbol} ({user_portfolio.user_id}).")
                     
                     else: # HOLD
                         logger.info(f"[AUTONOMOUS] Scan {ticker_symbol} ({user_portfolio.user_id}) : Aucun signal fort (HOLD).")

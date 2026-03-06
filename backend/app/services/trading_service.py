@@ -96,17 +96,26 @@ class TradingService:
         
         # 3. Exécution des trades basés sur les signaux
         for sig in signals:
+            summary = self.portfolio.get_portfolio_summary(db, user_id)
+            # Trouver si le symbole est déjà ouvert
+            open_position = next((pos for pos in summary['positions_ouvertes'] if pos['symbol'] == sig['symbol']), None)
+
             if sig['recommendation'] == 'BUY':
-                # On vérifie si on n'a pas déjà une position ouverte pour ce symbole
-                summary = self.portfolio.get_portfolio_summary(db, user_id)
-                already_open = any(pos['symbol'] == sig['symbol'] for pos in summary['positions_ouvertes'])
-                
-                if not already_open:
+                if not open_position:
                     self.portfolio.open_position(
                         db, user_id, sig['symbol'], sig['current_price'], 
                         sl=sig.get('stop_loss'), tp=sig.get('take_profit'),
                         justification=sig.get('justification')
                     )
+            elif sig['recommendation'] == 'SELL':
+                if open_position:
+                    # Fermeture de la position via le portefeuille
+                    logger.info(f"Signal de VENTE reçu pour {sig['symbol']}. Fermeture de la position {open_position['id']}.")
+                    self.portfolio.close_position(db, user_id, open_position['id'])
+                    
+                    # On loggue l'activité additionnelle
+                    msg = f"Axiom a vendu {sig['symbol']} sur signal IA : {sig.get('justification', 'Ajustement')}"
+                    self.portfolio.repo.log_activity(db, user_id, msg, "SELL")
         
         # 4. Enregistrement d'un point d'historique pour le graphique
         final_summary = self.portfolio.get_portfolio_summary(db, user_id)
