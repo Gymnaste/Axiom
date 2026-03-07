@@ -42,12 +42,17 @@ class AutonomousTradingAgent:
         db = SessionLocal()
         try:
             # 0. Récupérer les dernières news (RSS + Twitter)
-            logger.info("Mise à jour des flux d'actualités (RSS + Twitter)...")
+            logger.info(">>> ÉTAPE 0: Mise à jour des flux d'actualités (RSS + Twitter)...")
             try:
                 news_service.fetch_and_analyze_news(db)
-                await news_service.fetch_twitter_news(db)
+                # Timeout de 60s pour éviter les blocages infinis lors du scraping
+                await asyncio.wait_for(news_service.fetch_twitter_news(db), timeout=60.0)
+                logger.info("Flux d'actualités mis à jour avec succès.")
+            except asyncio.TimeoutError:
+                logger.warning("Timeout lors du scraping Twitter. Passage à la suite.")
             except Exception as e:
                 logger.error(f"Erreur lors de la mise à jour des news : {e}")
+                db.rollback() # CRITIQUE: Évite d'empoisonner la session pour la suite
 
             # On boucle sur tous les portefeuilles existants
             all_portfolios = db.query(Portfolio).all()
@@ -60,6 +65,7 @@ class AutonomousTradingAgent:
                 cycle_results = []
 
                 # 1. Étendre la liste des tickers via la découverte IA (basée sur les news globales)
+                logger.info(f">>> ÉTAPE 1: Découverte d'opportunités pour {user_portfolio.user_id}...")
                 try:
                     # On récupère les news globales pour la découverte
                     global_news_items = db.query(NewsItem).order_by(NewsItem.published_at.desc()).limit(15).all()
@@ -68,9 +74,9 @@ class AutonomousTradingAgent:
                     
                     # Fusionner avec les tickers de base (en évitant les doublons)
                     active_tickers = list(set(self.tickers_to_watch + discovered))
-                    logger.info(f"Tickers à analyser pour {user_portfolio.user_id} : {active_tickers}")
+                    logger.info(f"Tickers à analyser : {active_tickers}")
                 except Exception as e:
-                    logger.error(f"Erreur lors de la découverte pour {user_portfolio.user_id} : {e}")
+                    logger.error(f"Erreur lors de la découverte : {e}")
                     active_tickers = self.tickers_to_watch
 
                 for ticker_symbol in active_tickers:
@@ -128,9 +134,14 @@ class AutonomousTradingAgent:
                         perf_history += f"- {ct.symbol}: {status_str} (${ct.pnl:.2f}), Jusitification: {ct.justification}\n"
 
                     # 6. Demander à l'IA
-                    decision = self.openai_service.get_autonomous_decision(
-                        ticker_symbol, history, news, user_portfolio.capital, performance_history=perf_history
-                    )
+                    logger.info(f">>> ÉTAPE 6: Consultation IA pour {ticker_symbol}...")
+                    try:
+                        decision = self.openai_service.get_autonomous_decision(
+                            ticker_symbol, history, news, user_portfolio.capital, performance_history=perf_history
+                        )
+                    except Exception as e:
+                        logger.error(f"Erreur lors de la consultation OpenAI pour {ticker_symbol}: {e}")
+                        continue
                     
                     cycle_results.append({
                         "symbol": ticker_symbol,
@@ -200,6 +211,7 @@ class AutonomousTradingAgent:
 
                 # 7. Générer et sauvegarder le compte-rendu pour le chatbot
                 if cycle_results:
+                    logger.info(f">>> ÉTAPE 7: Génération du rapport de cycle pour {user_portfolio.user_id}...")
                     try:
                         report_text = self.openai_service.get_cycle_report_summary(cycle_results)
                         if report_text:
@@ -214,6 +226,7 @@ class AutonomousTradingAgent:
                             logger.info(f"Rapport de cycle envoyé au chatbot pour {user_portfolio.user_id}")
                     except Exception as e:
                         logger.error(f"Erreur lors de la publication du rapport : {e}")
+                        db.rollback()
 
         finally:
             db.close()

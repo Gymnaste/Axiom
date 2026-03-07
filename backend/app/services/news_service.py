@@ -43,11 +43,11 @@ class NewsService:
                     content_lower = t['content'].lower()
                     
                     # Bonus d'importance si mots-clés 2026 ou peur/euphorie détectés
-                    trigger_bonus = 1.0
+                    trigger_bonus: float = 1.0
                     from app.config import MARKET_TRIGGERS
                     for category, keywords in MARKET_TRIGGERS.items():
                         if any(k.lower() in content_lower for k in keywords):
-                            trigger_bonus = trigger_bonus + 0.5
+                            trigger_bonus += 0.5
                             print(f"TRIGGER DÉTECTÉ: {category} dans '{t['content'][:30]}...' (+0.5 weight)")
                     
                     if len(t['content']) < 15: continue # Trop court pour être pertinent
