@@ -43,14 +43,34 @@ NEWS_RSS_FEEDS: list[str] = [
 # Application
 APP_NAME: str = "Axiom"
 APP_VERSION: str = "1.0.0"
-# Twitter Configuration
-TWITTER_TARGETS: list[str] = ["elonmusk", "federalreserve", "unusual_whales", "WuBlockchain", "WatcherGuru"]
+# Twitter Configuration (Vitesse & Influence)
+TWITTER_TARGETS: list[str] = [
+    # 1. Vitesse Pure (News & Breaking)
+    "WatcherGuru", "whale_alert", "business", "ReutersBiz", "unusual_whales",
+    # 2. Market Movers (Insiders)
+    "elonmusk", "saylor", "VitalikButerin", "balajis",
+    # 3. Analystes & Stratèges
+    "charliebilello", "intocryptoverse", "scottmelker",
+    # 4. Surveillance Macro-Economique
+    "ecb", "federalreserve", "Lagarde"
+]
+
 TWITTER_WEIGHTS: dict[str, float] = {
-    "elonmusk": 2.5,
-    "federalreserve": 3.0,
-    "unusual_whales": 1.5,
-    "WuBlockchain": 1.2,
-    "WatcherGuru": 1.1
+    # News (Priorité rapidité)
+    "WatcherGuru": 2.0, "whale_alert": 2.2, "unusual_whales": 2.0,
+    # Insiders (Priorité impact)
+    "elonmusk": 3.0, "saylor": 2.5, "VitalikButerin": 2.5, "balajis": 2.0,
+    # Macro (Priorité structurelle)
+    "federalreserve": 3.5, "ecb": 3.0, "Lagarde": 3.0,
+    # Analystes (Poids standard)
+    "charliebilello": 1.5, "intocryptoverse": 1.2, "scottmelker": 1.2
+}
+
+# 2026 Trends & Triggers (Mots-clés pour l'IA)
+MARKET_TRIGGERS: dict[str, list[str]] = {
+    "PEUR": ["crash", "dump", "sell", "inflation spike", "Fed rate hike", "recession", "scare trade"],
+    "EUPHORIE": ["moon", "bullish", "buy the dip", "Fed rate cut", "ETF approval", "mass adoption"],
+    "TRENDS_2026": ["Agentic Finance", "Global Liquidity Index", "Stablecoin Payment Layer", "RWA", "DeFi"]
 }
 
 DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"

@@ -43,8 +43,18 @@ class NewsService:
                     score = analyze_sentiment(t['content'])
                     symbol = self.provider.detect_symbol(t['content'], MARKET_SYMBOLS)
                     
-                    # Denoising simple
-                    if len(t['content']) < 10: continue # Trop court
+                    # Denoising & Trigger Priority
+                    content_lower = t['content'].lower()
+                    from app.config import MARKET_TRIGGERS
+                    
+                    # Bonus d'importance si mots-clés 2026 ou peur/euphorie détectés
+                    trigger_bonus = 1.0
+                    for category, keywords in MARKET_TRIGGERS.items():
+                        if any(k.lower() in content_lower for k in keywords):
+                            trigger_bonus += 0.5
+                            logger.info(f"Trigger détecté ({category}) dans tweet de {target} : +0.5 weight bonus")
+                    
+                    if len(t['content']) < 15: continue # Trop court pour être pertinent
                     
                     news_item = self.repo.save_news(
                         db, 
@@ -55,7 +65,7 @@ class NewsService:
                         sentiment_score=score, 
                         related_symbol=symbol,
                         source_type="TWITTER",
-                        importance_weight=weight,
+                        importance_weight=weight * trigger_bonus,
                         raw_content=t['content']
                     )
                     all_tweets.append(news_item)
