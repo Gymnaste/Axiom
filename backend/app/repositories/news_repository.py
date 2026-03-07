@@ -6,8 +6,18 @@ from app.core.logger import setup_logger
 logger = setup_logger("news_repository")
 
 class NewsRepository:
-    def save_news(self, db: Session, title: str, source: str, url: str, published_at: datetime, sentiment_score: float, related_symbol: str):
-        news = NewsItem(title=title, source=source, url=url, published_at=published_at, sentiment_score=sentiment_score, related_symbol=related_symbol)
+    def save_news(self, db: Session, title: str, source: str, url: str, published_at: datetime, sentiment_score: float, related_symbol: str, source_type: str = "RSS", importance_weight: float = 1.0, raw_content: str = None):
+        news = NewsItem(
+            title=title, 
+            source=source, 
+            url=url, 
+            published_at=published_at, 
+            sentiment_score=sentiment_score, 
+            related_symbol=related_symbol,
+            source_type=source_type,
+            importance_weight=importance_weight,
+            raw_content=raw_content
+        )
         db.add(news)
         db.commit()
         db.refresh(news)

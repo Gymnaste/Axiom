@@ -36,8 +36,19 @@ class AutonomousTradingAgent:
 
     async def run_cycle(self):
         """Un cycle complet d'analyse et de trading."""
+        from app.services.news_service import NewsService
+        news_service = NewsService()
+        
         db = SessionLocal()
         try:
+            # 0. Récupérer les dernières news (RSS + Twitter)
+            logger.info("Mise à jour des flux d'actualités (RSS + Twitter)...")
+            try:
+                news_service.fetch_and_analyze_news(db)
+                await news_service.fetch_twitter_news(db)
+            except Exception as e:
+                logger.error(f"Erreur lors de la mise à jour des news : {e}")
+
             # On boucle sur tous les portefeuilles existants
             all_portfolios = db.query(Portfolio).all()
             if not all_portfolios:

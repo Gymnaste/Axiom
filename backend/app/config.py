@@ -43,4 +43,14 @@ NEWS_RSS_FEEDS: list[str] = [
 # Application
 APP_NAME: str = "Axiom"
 APP_VERSION: str = "1.0.0"
+# Twitter Configuration
+TWITTER_TARGETS: list[str] = ["elonmusk", "federalreserve", "unusual_whales", "WuBlockchain", "WatcherGuru"]
+TWITTER_WEIGHTS: dict[str, float] = {
+    "elonmusk": 2.5,
+    "federalreserve": 3.0,
+    "unusual_whales": 1.5,
+    "WuBlockchain": 1.2,
+    "WatcherGuru": 1.1
+}
+
 DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"

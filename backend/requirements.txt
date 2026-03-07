@@ -19,3 +19,5 @@ python-jose[cryptography]
 python-multipart
 openai
 psycopg2-binary
+playwright
+playwright-stealth

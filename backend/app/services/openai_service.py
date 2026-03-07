@@ -283,6 +283,7 @@ class OpenAIService:
                 "les dernières news, et ton historique récent. \n"
                 f"{perf_context}"
                 "\nAnalyses tes erreurs passées pour ne pas les reproduire. Analyse la COMBINAISON des courbes (techniques) et du marché (news). "
+                "Porte une attention CRITIQUE aux signaux provenant de Twitter (X) : les sources marquées avec un 'importance_weight' élevé (ex: > 2.0) sont des Insiders ou des sources d'autorité (ex: Fed, Elon Musk) et doivent influencer ta décision plus lourdement et plus rapidement que les news RSS classiques."
                 "Règles strictes :\n"
                 "1. Investissement max : 5% du balance actuel par trade.\n"
                 "2. Réponds UNIQUEMENT en JSON structuré.\n"

@@ -93,6 +93,9 @@ class NewsItem(Base):
     published_at = Column(DateTime, nullable=True)
     sentiment_score = Column(Float, nullable=True)   # -1.0 à +1.0
     related_symbol = Column(String(10), nullable=True, index=True)
+    source_type = Column(String(20), default="RSS") # RSS | TWITTER
+    importance_weight = Column(Float, default=1.0)
+    raw_content = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
