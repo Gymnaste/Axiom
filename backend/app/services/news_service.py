@@ -1,10 +1,6 @@
 from app.domain.news.sentiment import analyze_sentiment
 from app.repositories.news_repository import NewsRepository
 from app.providers.news_provider import NewsProvider
-
-from app.domain.news.sentiment import analyze_sentiment
-from app.repositories.news_repository import NewsRepository
-from app.providers.news_provider import NewsProvider
 from app.providers.twitter_provider import TwitterProvider
 from app.config import MARKET_SYMBOLS, TWITTER_TARGETS, TWITTER_WEIGHTS
 
@@ -76,5 +72,7 @@ class NewsService:
 
     def get_sentiment_for_symbol(self, db, symbol):
         news = self.repo.get_news_by_symbol(db, symbol)
-        if not news: return 0.0
-        return sum(n.sentiment_score for n in news) / len(news)
+        # Filtrer les scores None pour éviter les erreurs de calcul
+        valid_scores = [n.sentiment_score for n in news if n.sentiment_score is not None]
+        if not valid_scores: return 0.0
+        return sum(valid_scores) / len(valid_scores)
