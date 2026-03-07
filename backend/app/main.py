@@ -7,7 +7,7 @@ from app.services.trading_service import TradingService
 from app.routers import portfolio_router, signal_router, news_router, system_router, chat_router, market_router
 
 from app.services.trading_agent import trading_agent
-from app.migrate_db import migrate_news_table
+from app.migrate_db import migrate_db
 import asyncio
 
 trading_service = TradingService()
@@ -16,9 +16,9 @@ trading_service = TradingService()
 async def lifespan(app: FastAPI):
     print(">>> DÉMARRAGE DE L'APPLICATION AXIOM <<<")
     try:
-        print("Migration de la base de données (si nécessaire)...")
-        migrate_news_table()
-        print("Initialisation des tables...")
+        print(">>> DB DOCTOR: Exécution des migrations et initialisation...")
+        migrate_db()
+        print("Initialisation des tables via Base.metadata (Sécurité)...")
         init_db()
         print("Base de données initialisée avec succès.")
     except Exception as e:

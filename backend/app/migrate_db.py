@@ -1,30 +1,44 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from app.config import DATABASE_URL
+from app.database import Base, engine as db_engine
 
-def migrate_news_table():
+def migrate_db():
     parsed_url = DATABASE_URL
     if parsed_url.startswith("postgres://"):
         parsed_url = parsed_url.replace("postgres://", "postgresql://", 1)
     
-    print(f"Début de la migration sur {parsed_url.split('@')[-1] if '@' in parsed_url else 'DB locale'}")
+    print(f">>> DB DOCTOR: Vérification de la base de données... ({parsed_url.split('@')[-1] if '@' in parsed_url else 'SQLite'})")
     engine = create_engine(parsed_url)
     
+    # 1. Création des tables manquantes (Sécurité au cas où init_db() échoue)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Étape 1: Tables créées ou déjà présentes.")
+    except Exception as e:
+        print(f"Erreur lors de create_all: {e}")
+
+    # 2. Ajout des colonnes manquantes dans 'news' (Migration manuelle car create_all ne change pas les schémas existants)
     columns_to_add = [
         ("source_type", "VARCHAR(20) DEFAULT 'RSS'"),
         ("importance_weight", "FLOAT DEFAULT 1.0"),
         ("raw_content", "TEXT")
     ]
     
+    inspector = inspect(engine)
+    existing_columns = [c["name"] for c in inspector.get_columns("news")] if "news" in inspector.get_table_names() else []
+    
     with engine.connect() as conn:
         for col_name, col_type in columns_to_add:
-            try:
-                # On tente d'ajouter la colonne
-                conn.execute(text(f"ALTER TABLE news ADD COLUMN {col_name} {col_type}"))
-                conn.commit()
-                print(f"Migration réussie : Colonne {col_name} ajoutée.")
-            except Exception as e:
-                # Erreur attendue si la colonne existe déjà (OperationalError)
-                print(f"Info migration : La colonne {col_name} n'a pas été ajoutée (existe déjà ou erreur mineure).")
+            if col_name not in existing_columns:
+                try:
+                    print(f"Étape 2: Ajout de la colonne {col_name} à la table 'news'...")
+                    conn.execute(text(f"ALTER TABLE news ADD COLUMN {col_name} {col_type}"))
+                    conn.commit()
+                    print(f"Succès: {col_name} ajoutée.")
+                except Exception as e:
+                    print(f"Avertissement migration {col_name}: {e}")
+            else:
+                print(f"Étape 2: Colonne {col_name} déjà présente.")
 
 if __name__ == "__main__":
-    migrate_news_table()
+    migrate_db()
