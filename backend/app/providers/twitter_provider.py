@@ -18,8 +18,19 @@ class TwitterProvider:
     async def scrape_tweets(self, target_user: str, limit: int = 5):
         """Scrape les derniers tweets d'un utilisateur sans API."""
         results = []
+        try:
+            from playwright.async_api import async_playwright
+            from playwright_stealth import stealth_async
+        except ImportError:
+            logger.error("Playwright ou playwright-stealth non installés. Scraping Twitter désactivé.")
+            return []
+
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            try:
+                browser = await p.chromium.launch(headless=True)
+            except Exception as e:
+                logger.error(f"Impossible de lancer le navigateur (Chromium manquant ?) : {e}")
+                return []
             context = await browser.new_context(
                 user_agent=random.choice(self.user_agents),
                 viewport={'width': 1280, 'height': 800}
