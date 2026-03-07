@@ -37,23 +37,28 @@ export default function Dashboard() {
             />
 
             <main className="max-w-[1600px] w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
-                <div className="lg:col-span-1 h-[calc(100vh-140px)]">
+                {/* 5. Actualités (Dernier sur mobile) */}
+                <div className="lg:col-span-1 h-auto lg:h-[calc(100vh-140px)] order-5 lg:order-1">
                     <NewsPanel />
                 </div>
-                <div className="lg:col-span-2 flex flex-col gap-6">
-                    <div className="h-[400px]">
+                
+                {/* 1 & 2. Graphique et Positions */}
+                <div className="lg:col-span-2 flex flex-col gap-6 order-1 lg:order-2">
+                    <div className="h-[300px] lg:h-[400px] order-1">
                         <PortfolioChart />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 order-2">
                         <PositionsTable onSelectStock={setSelectedStock} key={refreshKey} />
                     </div>
                 </div>
-                <div className="lg:col-span-1 flex flex-col gap-6 h-[calc(100vh-140px)]">
-                    <div className="flex-1 overflow-hidden">
-                        <SignalPanel onSelectStock={setSelectedStock} />
-                    </div>
-                    <div className="h-[250px]">
+
+                {/* 3 & 4. Activité IA et Conseils (Signaux) */}
+                <div className="lg:col-span-1 flex flex-col gap-6 h-auto lg:h-[calc(100vh-140px)] order-2 lg:order-3">
+                    <div className="h-[250px] order-1 lg:order-2">
                         <ActivityLog />
+                    </div>
+                    <div className="flex-1 overflow-hidden order-2 lg:order-1">
+                        <SignalPanel onSelectStock={setSelectedStock} />
                     </div>
                 </div>
             </main>
