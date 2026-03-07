@@ -1,6 +1,4 @@
 import asyncio
-from playwright.async_api import async_playwright
-from playwright_stealth import stealth_async
 from datetime import datetime
 from app.core.logger import setup_logger
 import random
@@ -20,9 +18,17 @@ class TwitterProvider:
         results = []
         try:
             from playwright.async_api import async_playwright
-            from playwright_stealth import stealth_async
+            # Fallback si stealth_async n'est pas dispo dans cette version de playwright-stealth
+            try:
+                from playwright_stealth import stealth_async as stealth_func
+            except ImportError:
+                try:
+                    from playwright_stealth import stealth as stealth_func
+                except ImportError:
+                    logger.error("playwright-stealth n'est pas correctement installé.")
+                    return []
         except ImportError:
-            logger.error("Playwright ou playwright-stealth non installés. Scraping Twitter désactivé.")
+            logger.error("Playwright n'est pas installé. Scraping Twitter désactivé.")
             return []
 
         async with async_playwright() as p:
@@ -36,7 +42,15 @@ class TwitterProvider:
                 viewport={'width': 1280, 'height': 800}
             )
             page = await context.new_page()
-            await stealth_async(page)
+            
+            # Application du mode stealth (async ou sync selon la version)
+            try:
+                if asyncio.iscoroutinefunction(stealth_func):
+                    await stealth_func(page)
+                else:
+                    stealth_func(page)
+            except Exception as e:
+                logger.warning(f"Erreur lors de l'application du mode stealth : {e}")
 
             url = f"https://syndication.twitter.com/srv/timeline-profile/screen-name/{target_user}"
             logger.info(f"Scraping tweets pour @{target_user} via {url}")
