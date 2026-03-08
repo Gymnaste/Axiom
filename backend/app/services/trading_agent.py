@@ -18,17 +18,33 @@ class AutonomousTradingAgent:
         self.running = False
 
     async def start_loop(self):
-        """Lance la boucle autonome."""
+        """Lance la boucle autonome avec résilience accrue."""
         if self.running:
             return
         self.running = True
         logger.info("Axiom Autonomous Agent démarré.")
         
+        # Délai initial de sécurité pour laisser le serveur et la DB se stabiliser
+        await asyncio.sleep(30)
+        
         while self.running:
             try:
+                # Heartbeat dans la DB pour prouver que l'agent est vivant
+                db = SessionLocal()
+                try:
+                    self.log_activity(db, "system", "Axiom Heartbeat: Agent en ligne et prêt pour un cycle.", "INFO")
+                finally:
+                    db.close()
+
                 await self.run_cycle()
+                
             except Exception as e:
                 logger.error(f"Erreur dans le cycle autonome : {e}")
+            except BaseException as e:
+                # Capture les erreurs fatales pour éviter que la boucle ne meure sans log
+                logger.critical(f"ERREUR FATALE (BaseException) dans le loop : {e}")
+                self.running = False # On arrête proprement si c'est vraiment critique
+                raise e
             
             # Attendre 30 minutes
             logger.info("Cycle terminé. Prochain scan dans 30 minutes.")
