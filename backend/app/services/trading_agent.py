@@ -230,6 +230,7 @@ class AutonomousTradingAgent:
                     logger.info(f">>> ÉTAPE 7: Génération du rapport de cycle pour {user_portfolio.user_id}...")
                     try:
                         report_text = self.openai_service.get_cycle_report_summary(cycle_results)
+                        if report_text:
                             now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
                             new_msg = ChatMessage(
                                 user_id=user_portfolio.user_id,
