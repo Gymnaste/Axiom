@@ -245,12 +245,19 @@ class OpenAIService:
             return {"action": "HOLD", "reasoning": f"Erreur technique: {str(e)}"}
 
     def get_cycle_report_summary(self, analysis_results: list) -> str:
-        if not AI_ENABLED or not analysis_results: return ""
+        if not AI_ENABLED: return ""
         try:
-            prompt = (
-                "Rédige un compte-rendu très court (3 phrases) pour un utilisateur sur les actions de trading effectuées :\n"
-                f"{json.dumps(analysis_results)}"
-            )
+            if not analysis_results:
+                prompt = (
+                    "Tu es Axiom. Tu viens de scanner le marché et tes algorithmes n'ont trouvé aucune opportunité d'achat ou de vente intéressante pour le moment. "
+                    "Rédige un message très court (1-2 phrases) pour l'utilisateur pour lui dire que tu as bien analysé le marché mais que tout est calme et que tu restes en veille."
+                )
+            else:
+                prompt = (
+                    "Tu es Axiom. Rédige un compte-rendu très court (2-3 phrases) pour un utilisateur sur les actions de trading effectuées durant ce cycle :\n"
+                    f"{json.dumps(analysis_results)}"
+                )
+            
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
@@ -260,4 +267,4 @@ class OpenAIService:
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            return "Cycle d'analyse terminé. Les ajustements nécessaires ont été effectués."
+            return "Cycle d'analyse terminé. Le marché est calme, aucune action n'a été nécessaire."

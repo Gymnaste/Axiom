@@ -196,26 +196,25 @@ class AutonomousTradingAgent:
             except Exception as e:
                 logger.error(f"Erreur analyse {ticker_symbol}: {e}")
 
-        # 7. Rapport final pour le chatbot
-        if cycle_results:
-            try:
-                report_text = await asyncio.wait_for(
-                    asyncio.to_thread(self.openai_service.get_cycle_report_summary, cycle_results),
-                    timeout=40.0
+        # 7. Rapport final pour le chatbot (Toujours généré, même si vide)
+        try:
+            report_text = await asyncio.wait_for(
+                asyncio.to_thread(self.openai_service.get_cycle_report_summary, cycle_results),
+                timeout=40.0
+            )
+            if report_text:
+                now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+                new_msg = ChatMessage(
+                    user_id=user_portfolio.user_id,
+                    role="assistant",
+                    content=f"🤖 **Rapport de cycle autonome ({now_str})** :\n{report_text}"
                 )
-                if report_text:
-                    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    new_msg = ChatMessage(
-                        user_id=user_portfolio.user_id,
-                        role="assistant",
-                        content=f"🤖 **Rapport de cycle autonome ({now_str})** :\n{report_text}"
-                    )
-                    db.add(new_msg)
-                    db.commit()
-                    # On récupère l'ID du message pour le lier au log d'activité
-                    self.log_activity(db, user_portfolio.user_id, f"Nouveau rapport d'analyse disponible ({now_str}).", "INFO", reference_id=new_msg.id)
-            except Exception as e:
-                logger.error(f"Erreur publication rapport: {e}")
+                db.add(new_msg)
+                db.commit()
+                # On récupère l'ID du message pour le lier au log d'activité
+                self.log_activity(db, user_portfolio.user_id, f"Nouveau rapport d'analyse disponible ({now_str}).", "INFO", reference_id=new_msg.id)
+        except Exception as e:
+            logger.error(f"Erreur publication rapport: {e}")
 
     def log_activity(self, db: Session, user_id: str, message: str, type: str, reference_id: int = None):
         try:
