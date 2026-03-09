@@ -8,6 +8,7 @@ export default function Chatbot() {
     ])
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
+    const [highlightedId, setHighlightedId] = useState(null)
     const messagesEndRef = useRef(null)
 
     const scrollToBottom = () => {
@@ -33,8 +34,24 @@ export default function Chatbot() {
     }, [])
 
     useEffect(() => {
+        // Écouter les demandes d'ouverture de message (depuis ActivityLog)
+        const handleOpenMessage = (e) => {
+            const { messageId } = e.detail;
+            setIsOpen(true);
+            fetchHistory(); // S'assurer que le message est chargé
+            setHighlightedId(messageId);
+            
+            // Retirer le highlight après 5 secondes
+            setTimeout(() => setHighlightedId(null), 5000);
+        };
+
+        window.addEventListener('open-chat-message', handleOpenMessage);
+        return () => window.removeEventListener('open-chat-message', handleOpenMessage);
+    }, []);
+
+    useEffect(() => {
         scrollToBottom()
-    }, [messages])
+    }, [messages, isOpen])
 
     const handleSend = async () => {
         if (!input.trim()) return
@@ -80,13 +97,21 @@ export default function Chatbot() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                        {messages.map((m, i) => (
-                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-xs whitespace-pre-wrap ${m.role === 'user' ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-200'}`}>
-                                    {m.content}
+                        {messages.map((m, i) => {
+                            const isHighlighted = m.id === highlightedId;
+                            return (
+                                <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div 
+                                        className={`max-w-[80%] rounded-lg px-3 py-2 text-xs transition-all duration-1000 whitespace-pre-wrap 
+                                            ${m.role === 'user' ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-200'}
+                                            ${isHighlighted ? 'ring-2 ring-sky-400 bg-sky-900/40 scale-[1.02]' : ''}
+                                        `}
+                                    >
+                                        {m.content}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {loading && (
                             <div className="flex justify-start">
                                 <div className="bg-gray-800 text-gray-200 rounded-lg px-3 py-2 text-xs italic">En train de réfléchir...</div>

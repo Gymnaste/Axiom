@@ -212,13 +212,14 @@ class AutonomousTradingAgent:
                     )
                     db.add(new_msg)
                     db.commit()
-                    self.log_activity(db, user_portfolio.user_id, f"Nouveau rapport d'analyse disponible ({now_str}).", "INFO")
+                    # On récupère l'ID du message pour le lier au log d'activité
+                    self.log_activity(db, user_portfolio.user_id, f"Nouveau rapport d'analyse disponible ({now_str}).", "INFO", reference_id=new_msg.id)
             except Exception as e:
                 logger.error(f"Erreur publication rapport: {e}")
 
-    def log_activity(self, db: Session, user_id: str, message: str, type: str):
+    def log_activity(self, db: Session, user_id: str, message: str, type: str, reference_id: int = None):
         try:
-            log = ActivityLog(user_id=user_id, message=message, type=type)
+            log = ActivityLog(user_id=user_id, message=message, type=type, reference_id=reference_id)
             db.add(log)
             db.commit()
         except Exception as e:

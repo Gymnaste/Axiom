@@ -23,6 +23,16 @@ export default function ActivityLog() {
         return () => clearInterval(interval);
     }, []);
 
+    const handleLogClick = (log) => {
+        if (log.reference_id) {
+            // Émettre un événement personnalisé pour le chatbot
+            const event = new CustomEvent('open-chat-message', { 
+                detail: { messageId: log.reference_id } 
+            });
+            window.dispatchEvent(event);
+        }
+    };
+
     if (loading && logs.length === 0) {
         return <div className="p-4 text-gray-500 text-xs italic">Chargement de l'activité...</div>;
     }
@@ -41,7 +51,11 @@ export default function ActivityLog() {
                     <p className="p-4 text-gray-600 text-xs italic text-center">Aucune activité récente.</p>
                 ) : (
                     logs.map((log) => (
-                        <div key={log.id} className="p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 hover:border-sky-500/30 transition-colors group">
+                        <div 
+                            key={log.id} 
+                            onClick={() => handleLogClick(log)}
+                            className={`p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 transition-all group ${log.reference_id ? 'cursor-pointer hover:border-sky-500 hover:bg-sky-500/10 active:scale-[0.98]' : 'hover:border-gray-600'}`}
+                        >
                             <div className="flex justify-between items-start mb-1">
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${log.type === 'BUY' ? 'bg-green-500/20 text-green-400' :
                                     log.type === 'SELL' ? 'bg-red-500/20 text-red-400' :
@@ -55,6 +69,11 @@ export default function ActivityLog() {
                             </div>
                             <p className="text-xs text-gray-300 leading-relaxed">
                                 {log.message}
+                                {log.reference_id && (
+                                    <span className="block mt-1 text-[10px] text-sky-400 font-bold group-hover:underline italic">
+                                        Voir l'analyse complète →
+                                    </span>
+                                )}
                             </p>
                         </div>
                     ))

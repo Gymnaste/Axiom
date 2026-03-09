@@ -1,7 +1,3 @@
-"""
-database.py — Configuration SQLAlchemy + modèles de tables pour Axiom V1
-Base de données SQLite locale. Toutes les tables définies ici.
-"""
 from datetime import datetime
 from sqlalchemy import (
     create_engine, Column, Integer, Float, String,
@@ -68,7 +64,7 @@ class Trade(Base):
     take_profit = Column(Float, nullable=True)
     justification = Column(Text, nullable=True)
     ai_reasoning = Column(Text, nullable=True)
-    pnl = Column(Float, nullable=True)  # Profit & Loss en $锋
+    pnl = Column(Float, nullable=True)  # Profit & Loss en $
 
 
 class ActivityLog(Base):
@@ -80,6 +76,7 @@ class ActivityLog(Base):
     message = Column(Text, nullable=False)
     type = Column(String(20), default="INFO")  # INFO | BUY | SELL | ERROR
     timestamp = Column(DateTime, default=datetime.utcnow)
+    reference_id = Column(Integer, nullable=True) # ID du ChatMessage lié pour navigation
 
 
 class PortfolioHistory(Base):
