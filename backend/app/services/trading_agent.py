@@ -230,15 +230,18 @@ class AutonomousTradingAgent:
                     logger.info(f">>> ÉTAPE 7: Génération du rapport de cycle pour {user_portfolio.user_id}...")
                     try:
                         report_text = self.openai_service.get_cycle_report_summary(cycle_results)
-                        if report_text:
-                            # Sauvegarder dans ChatMessage
+                            now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
                             new_msg = ChatMessage(
                                 user_id=user_portfolio.user_id,
                                 role="assistant",
-                                content=f"🤖 **Rapport de cycle autonome** :\n{report_text}"
+                                content=f"🤖 **Rapport de cycle autonome ({now_str})** :\n{report_text}"
                             )
                             db.add(new_msg)
                             db.commit()
+                            
+                            # On loggue aussi dans l'ActivityLog qu'un rapport est dispo
+                            self.log_activity(db, user_portfolio.user_id, f"Nouveau rapport d'analyse disponible dans le chatbot ({now_str}).", "INFO")
+                            
                             logger.info(f"Rapport de cycle envoyé au chatbot pour {user_portfolio.user_id}")
                     except Exception as e:
                         logger.error(f"Erreur lors de la publication du rapport : {e}")

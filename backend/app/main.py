@@ -9,46 +9,39 @@ from app.routers import portfolio_router, signal_router, news_router, system_rou
 from app.services.trading_agent import trading_agent
 from app.migrate_db import migrate_db
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 trading_service = TradingService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(">>> DÉMARRAGE DE L'APPLICATION AXIOM <<<")
+    logger.info(">>> DÉMARRAGE DE L'APPLICATION AXIOM (LIFESPAN) <<<")
     try:
-        print(">>> DB DOCTOR: Exécution des migrations et initialisation...")
+        logger.info(">>> DB DOCTOR: Exécution des migrations et initialisation...")
         migrate_db()
-        print("Initialisation des tables via Base.metadata (Sécurité)...")
         init_db()
-        print("Base de données initialisée avec succès.")
+        logger.info("Base de données initialisée avec succès.")
     except Exception as e:
-        print(f"ERREUR CRITIQUE lors de init_db: {e}")
+        logger.error(f"ERREUR CRITIQUE lors de init_db: {e}")
     
     # Lancement de la boucle autonome dans une tâche séparée
     try:
-        print("Lancement de la boucle autonome Axiom...")
-        asyncio.create_task(trading_agent.start_loop())
-        print("Boucle autonome lancée en arrière-plan.")
+        logger.info("Lancement de la boucle autonome Axiom...")
+        # On stocke la tâche dans un état persistant pour éviter la garbage collection
+        app.state.autonomous_agent_task = asyncio.create_task(trading_agent.start_loop())
+        logger.info("Boucle autonome lancée en arrière-plan avec succès.")
     except Exception as e:
-        print(f"ERREUR lors du lancement de la boucle: {e}")
+        logger.error(f"ERREUR lors du lancement de la boucle: {e}")
     
-    try:
-        def run_multi_user_cycle(db):
-            user_ids = trading_service.portfolio.repo.get_all_user_ids(db)
-            for uid in user_ids:
-                try:
-                    trading_service.run_trading_cycle(db, uid)
-                except Exception as e:
-                    print(f"Erreur cycle pour {uid}: {e}")
-                    
-        start_scheduler(run_multi_user_cycle, SessionLocal)
-        print("Scheduler démarré.")
-    except Exception as e:
-        print(f"ERREUR lors du démarrage du scheduler: {e}")
-
+    # NOTE: L'ancien scheduler est désactivé au profit de l'AutonomousTradingAgent
+    # qui est plus complet et gère les rapports de cycle automatiques.
+    
     yield
-    print("Arrêt de l'application...")
-    stop_scheduler()
+    logger.info("Arrêt de l'application...")
+    if hasattr(app.state, "autonomous_agent_task"):
+        app.state.autonomous_agent_task.cancel()
 
 import os
 app = FastAPI(title="Trading Bot", lifespan=lifespan)
