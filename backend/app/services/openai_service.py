@@ -14,7 +14,8 @@ client = None
 if AI_ENABLED:
     if OPENAI_API_KEY:
         try:
-            client = OpenAI(api_key=OPENAI_API_KEY)
+            # On définit un timeout global par défaut de 60s
+            client = OpenAI(api_key=OPENAI_API_KEY, timeout=60.0)
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation du client OpenAI: {e}")
             AI_ENABLED = False
@@ -45,7 +46,8 @@ class OpenAIService:
                     {"role": "user", "content": message}
                 ],
                 temperature=0.7,
-                max_tokens=500
+                max_tokens=500,
+                timeout=45.0
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -71,7 +73,6 @@ class OpenAIService:
             "Si tu as besoin de plus de précisions pour un trade (quantité, ticker exact), pose la question à l'utilisateur."
         )
 
-        # Insérer ou mettre à jour le message système
         if not messages or messages[0].get("role") != "system":
             messages.insert(0, {"role": "system", "content": system_prompt})
         else:
@@ -82,14 +83,11 @@ class OpenAIService:
                 "type": "function",
                 "function": {
                     "name": "search_market_data",
-                    "description": "Recherche un ticker officiel (Yahoo Finance) ou des informations de marché à partir d'un nom d'entreprise ou d'un secteur (ex: pétrole).",
+                    "description": "Recherche un ticker officiel (Yahoo Finance) ou des informations de marché à partir d'un nom d'entreprise ou d'un secteur.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "La recherche de l'utilisateur (nom d'entreprise, secteur, etc.)"
-                            }
+                            "query": {"type": "string", "description": "La recherche de l'utilisateur"}
                         },
                         "required": ["query"]
                     }
@@ -99,23 +97,13 @@ class OpenAIService:
                 "type": "function",
                 "function": {
                     "name": "execute_trade",
-                    "description": "Exécute un ordre d'achat (buy) ou de vente (sell) sur le marché pour l'utilisateur.",
+                    "description": "Exécute un ordre d'achat (buy) ou de vente (sell).",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "ticker": {
-                                "type": "string",
-                                "description": "Le ticker boursier officiel (ex: AAPL, TSLA)."
-                            },
-                            "action": {
-                                "type": "string",
-                                "enum": ["buy", "sell"],
-                                "description": "L'action à effectuer : 'buy' pour acheter, 'sell' pour vendre."
-                            },
-                            "amount": {
-                                "type": "number",
-                                "description": "Le montant en dollars ($) de l'opération ou la quantité si l'utilisateur précise des unités (dans le doute, considère que ce sont des dollars)."
-                            }
+                            "ticker": {"type": "string", "description": "Le ticker boursier officiel."},
+                            "action": {"type": "string", "enum": ["buy", "sell"], "description": "L'action à effectuer."},
+                            "amount": {"type": "number", "description": "Le montant en dollars ($) ou la quantité."}
                         },
                         "required": ["ticker", "action", "amount"]
                     }
@@ -125,14 +113,11 @@ class OpenAIService:
                 "type": "function",
                 "function": {
                     "name": "get_news",
-                    "description": "Récupère les dernières actualités financières. Peut être filtré par ticker.",
+                    "description": "Récupère les dernières actualités financières.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "ticker": {
-                                "type": "string",
-                                "description": "Le ticker boursier optionnel (ex: AAPL) pour des news spécifiques."
-                            }
+                            "ticker": {"type": "string", "description": "Le ticker boursier optionnel."}
                         }
                     }
                 }
@@ -145,39 +130,29 @@ class OpenAIService:
                 messages=messages,
                 tools=chat_tools,
                 temperature=0.6,
-                max_tokens=500
+                max_tokens=500,
+                timeout=60.0
             )
             return response.choices[0].message
         except Exception as e:
             logger.error(f"Erreur OpenAI Tool Calling : {e}")
-            error_msg = str(e).lower()
-            if "insufficient_quota" in error_msg:
-                return {"role": "assistant", "content": "Erreur OpenAI : Vous n'avez plus de crédits (quota dépassé)."}
-            elif "invalid_api_key" in error_msg:
-                return {"role": "assistant", "content": "Erreur OpenAI : Votre clé API est invalide."}
-            return {"role": "assistant", "content": f"Désolé, erreur technique lors de l'analyse ({type(e).__name__}) : {str(e)}."}
+            return {"role": "assistant", "content": f"Désolé, erreur technique IA ({type(e).__name__}) : {str(e)}."}
 
     def analyze_market_signal(self, symbol: str, indicators: dict, sentiment: float, portfolio_context: str) -> dict:
-        """Demande à l'IA d'analyser le marché et de retourner une décision au format JSON."""
         if not AI_ENABLED:
-            logger.info(f"[IA désactivée] Analyse de {symbol} ignorée (HOLD par défaut)")
-            return {"recommendation": "HOLD", "confidence": 0.0, "justification": "IA désactivée (AI_ENABLED=false)", "take_profit": 0, "stop_loss": 0}
+            return {"recommendation": "HOLD", "confidence": 0.0, "justification": "IA désactivée", "take_profit": 0, "stop_loss": 0}
         try:
             system_prompt = (
-                "Tu es un algorithme de trading expert quantitatif et psychologique. "
-                "Ton rôle est d'analyser les données de marché qu'on te fournit et de renvoyer UNIQUEMENT un objet JSON valide. "
-                "Le format JSON doit obéir à ce schéma exact : \n"
-                '{"recommendation": "BUY" | "SELL" | "HOLD", "confidence": float (entre 0.0 et 1.0), "justification": "string courte", "take_profit": float, "stop_loss": float}'
-                "\nSi la recommandation est BUY ou SELL, tu DOIS fournir un take_profit et un stop_loss logiques. Sinon, mets-les à 0. "
-                "IMPORTANT: Réponds uniquement avec du JSON."
+                "Tu es un algorithme de trading expert. "
+                "Réponds UNIQUEMENT en JSON valide : \n"
+                '{"recommendation": "BUY" | "SELL" | "HOLD", "confidence": float, "justification": "string", "take_profit": float, "stop_loss": float}'
             )
 
             user_message = (
-                f"Analyse l'action {symbol} avec les données suivantes :\n"
-                f"- Indicateurs techniques : {json.dumps(indicators)}\n"
-                f"- Score de sentiment des actualités récentes : {sentiment} (-1 très négatif, +1 très positif)\n\n"
-                f"Contexte du portefeuille actuel : {portfolio_context}\n\n"
-                "Donne ta recommandation finale au format JSON strict."
+                f"Analyse {symbol} :\n"
+                f"- Indicateurs : {json.dumps(indicators)}\n"
+                f"- Sentiment : {sentiment}\n"
+                f"Contexte : {portfolio_context}"
             )
 
             response = client.chat.completions.create(
@@ -188,122 +163,68 @@ class OpenAIService:
                 ],
                 response_format={ "type": "json_object" },
                 temperature=0.4,
-                max_tokens=200
+                max_tokens=200,
+                timeout=45.0
             )
 
             result_str = response.choices[0].message.content
-            result_json = json.loads(result_str)
-            return result_json
+            return json.loads(result_str)
         except Exception as e:
-            logger.error(f"Erreur OpenAI lors de l'analyse pour {symbol} : {e}")
-            # Fallback en cas d'erreur de l'IA
+            logger.error(f"Erreur analyze_market_signal pour {symbol} : {e}")
             return {"recommendation": "HOLD", "confidence": 0.0, "justification": f"Erreur IA : {str(e)}", "take_profit": 0, "stop_loss": 0}
 
     def discover_opportunities(self, news_summary: str) -> list[str]:
-        """Analyse l'actualité globale et propose des symboles boursiers prometteurs."""
-        if not AI_ENABLED:
-            logger.info("[IA désactivée] Découverte d'opportunités ignorée")
-            return []
+        if not AI_ENABLED: return []
         try:
             prompt = (
-                "Tu es un analyste financier expert. Voici les dernières actualités mondiales du marché financier :\n"
-                f"{news_summary}\n\n"
-                "Identifie 3 entreprises très prometteuses ou très risquées dont on parle actuellement "
-                "et qui pourraient représenter une excellente opportunité de trade à court terme. "
-                "IMPORTANT : Propose un spectre TRÈS LARGE d'actions (Small caps, Mid caps, et Large caps). Ne te limite pas aux GAFAM ou aux géants technologiques. Cherche des pépites sur tout le marché. "
-                "Tu DOIS retourner UNIQUEMENT des TICKERS OFFICIELS VALIDES sur Yahoo Finance (ex: GTLB et non GITLAB). "
-                "Retourne UNIQUEMENT une liste JSON de ces symboles boursiers sous ce format exact : "
-                '{"symbols": ["AAPL", "NVDA", "PLTR"]}'
+                "Analyse l'actualité financière et propose 3 symboles prometteurs (tickers Yahoo Finance).\n"
+                'Format JSON : {"symbols": ["AAPL", "NVDA", "PLTR"]}'
             )
 
             response = client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": news_summary + "\n\n" + prompt}],
                 response_format={ "type": "json_object" },
                 temperature=0.7,
-                max_tokens=150
+                max_tokens=150,
+                timeout=45.0
             )
 
             result = json.loads(response.choices[0].message.content)
             return result.get("symbols", [])
         except Exception as e:
-            logger.error(f"Erreur découverte OpenAI : {e}")
+            logger.error(f"Erreur discover_opportunities: {e}")
             return []
 
     def get_ticker_suggestion(self, query: str) -> str:
-        """Utilise l'IA pour mapper un nom d'entreprise ou une recherche vers un ticker valide."""
         if not query: return ""
-        q = query.strip().upper()
-        
-        # Mapping manuel de base en cas d'échec IA ou pour vitesse
-        manual_map = {
-            "APPLE": "AAPL", "MICROSOFT": "MSFT", "TESLA": "TSLA", "GOOGLE": "GOOGL", 
-            "ALPHABET": "GOOGL", "AMAZON": "AMZN", "META": "META", "FACEBOOK": "META",
-            "NVIDIA": "NVDA", "NETFLIX": "NFLX", "BITCOIN": "BTC-USD", "ETH": "ETH-USD",
-            "TOTAL": "TTE.PA", "LVMH": "MC.PA", "AIRBUS": "AIR.PA", "RENAULT": "RNO.PA",
-            "BNP": "BNP.PA", "SOCIETE GENERALE": "GLE.PA", "ORANGE": "ORA.PA"
-        }
-        if q in manual_map: return manual_map[q]
-
-        if not AI_ENABLED:
-            return q
+        if not AI_ENABLED: return query.strip().upper()
         try:
-            prompt = (
-                f"L'utilisateur recherche une action avec ce texte : '{query}'.\n"
-                "Identifie l'entreprise probable et son TICKER boursier officiel (Yahoo Finance).\n"
-                "Réponds UNIQUEMENT avec le ticker en majuscules (ex: AAPL, BTC-USD, MSFT).\n"
-                "Si tu ne trouves rien, renvoie UNIQUEMENT le texte original en majuscules."
-            )
+            prompt = f"Donne le ticker Yahoo Finance pour '{query}'. Réponds UNIQUEMENT avec le ticker (ex: AAPL)."
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0,
-                max_tokens=10
+                max_tokens=10,
+                timeout=20.0
             )
             return response.choices[0].message.content.strip().upper()
         except Exception as e:
-            logger.error(f"Erreur suggestion ticker OpenAI : {e}")
-            return q
+            return query.strip().upper()
 
     def get_autonomous_decision(self, ticker: str, history: list, news: list, balance: float, performance_history: str = "") -> dict:
-        """
-        Analyse les données OHLC et les news pour prendre une décision de trading 100% autonome.
-        Prend en compte l'historique de performance pour ne pas répéter les erreurs passées.
-        """
-        if not AI_ENABLED:
-            return {"action": "HOLD", "reasoning": "IA désactivée"}
-
+        if not AI_ENABLED: return {"action": "HOLD", "reasoning": "IA désactivée"}
         try:
-            perf_context = f"\n--- TON HISTORIQUE DE PERFORMANCE RÉCENT ---\n{performance_history}\n" if performance_history else ""
-            
             system_prompt = (
-                "Tu es le gestionnaire de fonds principal de Axiom. "
-                "Ton objectif est de maximiser les profits tout en gérant strictement le risque. "
-                "Tu reçois des données techniques (OHLC), les indicateurs techniques (RSI, SMA, EMA), "
-                "les dernières news, et ton historique récent. \n"
-                f"{perf_context}"
-                "\nAnalyses tes erreurs passées pour ne pas les reproduire. Analyse la COMBINAISON des courbes (techniques) et du marché (news). "
-                "Porte une attention CRITIQUE aux signaux provenant de Twitter (X) : les sources marquées avec un 'importance_weight' élevé (ex: > 2.0) sont des Insiders ou des sources d'autorité (ex: Fed, Elon Musk) et doivent influencer ta décision plus lourdement et plus rapidement que les news RSS classiques."
-                "Règles strictes :\n"
-                "1. Investissement max : 5% du balance actuel par trade.\n"
-                "2. Réponds UNIQUEMENT en JSON structuré.\n"
-                "3. Si tu achètes, définis obligatoirement un stop_loss (SL) et un take_profit (TP) cohérents.\n"
-                "Format attendu :\n"
-                "{\n"
-                '  "action": "BUY" | "SELL" | "HOLD",\n'
-                '  "amount_pct": float (0.0 à 0.05),\n'
-                '  "stop_loss": float,\n'
-                '  "take_profit": float,\n'
-                '  "reasoning": "explication de l\'analyse technique (courbes) et fondamentale (news)"\n'
-                "}"
+                "Tu es un gestionnaire de fonds. Décide si on doit BUY, SELL ou HOLD.\n"
+                "Réponds UNIQUEMENT en JSON structuré :\n"
+                '{"action": "BUY"|"SELL"|"HOLD", "amount_pct": float, "stop_loss": float, "take_profit": float, "reasoning": "string"}'
             )
 
             user_message = (
-                f"--- DONNÉES POUR {ticker} ---\n"
-                f"Balance actuel : ${balance:.2f}\n"
-                f"Historique récent (OHLC) : {json.dumps(history[-10:])}\n"
-                f"Dernières news : {json.dumps(news)}\n\n"
-                "Quelle est ta décision basée sur les courbes et l'actualité ?"
+                f"Ticker: {ticker}\nBalance: ${balance:.2f}\n"
+                f"History sample: {json.dumps(history[-5:])}\n"
+                f"Perf context: {performance_history}"
             )
 
             response = client.chat.completions.create(
@@ -314,34 +235,29 @@ class OpenAIService:
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.3,
-                max_tokens=400
+                max_tokens=400,
+                timeout=60.0
             )
 
             return json.loads(response.choices[0].message.content)
         except Exception as e:
-            logger.error(f"Erreur get_autonomous_decision pour {ticker}: {e}")
+            logger.error(f"Erreur get_autonomous_decision {ticker}: {e}")
             return {"action": "HOLD", "reasoning": f"Erreur technique: {str(e)}"}
 
     def get_cycle_report_summary(self, analysis_results: list) -> str:
-        """Génère un résumé global du cycle d'analyse pour le chatbot."""
-        if not AI_ENABLED or not analysis_results:
-            return ""
+        if not AI_ENABLED or not analysis_results: return ""
         try:
             prompt = (
-                "Tu es Axiom. Tu viens de terminer un cycle d'analyse autonome du marché. "
-                "Voici les résultats de tes analyses pour différents tickers :\n"
-                f"{json.dumps(analysis_results)}\n\n"
-                "Rédige un compte-rendu très court (3-4 phrases) et professionnel pour l'utilisateur. "
-                "Mentionne les actions entreprises (achats/ventes) et la tendance générale observée sur les courbes et news. "
-                "Sois direct et encourageant."
+                "Rédige un compte-rendu très court (3 phrases) pour un utilisateur sur les actions de trading effectuées :\n"
+                f"{json.dumps(analysis_results)}"
             )
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_tokens=200
+                max_tokens=200,
+                timeout=45.0
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            logger.error(f"Erreur génération rapport cycle : {e}")
-            return "Cycle d'analyse terminé. Le marché a été passé en revue et les ajustements nécessaires ont été effectués."
+            return "Cycle d'analyse terminé. Les ajustements nécessaires ont été effectués."

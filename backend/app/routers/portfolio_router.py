@@ -5,13 +5,16 @@ from app.database import get_db
 from app.services.portfolio_service import PortfolioService
 from app.providers.market_provider import MarketProvider
 from app.core.auth_deps import get_current_user_id
+import logging
 
+logger = logging.getLogger("portfolio_router")
 router = APIRouter(prefix="/portfolio", tags=["Portfolio"])
 service = PortfolioService()
 market = MarketProvider()
 
 @router.get("")
 def get_portfolio(db=Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    logger.info(f"FETCH: Portfolio pour user_id={user_id}")
     return service.get_portfolio_summary(db, user_id)
 
 @router.get("/positions")
@@ -95,6 +98,7 @@ def deposit(
 @router.get("/activity")
 def get_activity_logs(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
     """Récupère les derniers logs d'activité de l'IA."""
+    logger.info(f"FETCH: Activity logs pour user_id={user_id}")
     from app.database import ActivityLog
     logs = db.query(ActivityLog).filter(ActivityLog.user_id == user_id).order_by(ActivityLog.timestamp.desc()).limit(20).all()
     return logs
