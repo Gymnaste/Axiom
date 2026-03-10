@@ -49,6 +49,7 @@ export const portfolioAPI = {
     withdraw: (amount) => API.post('/portfolio/withdraw', { amount }),
     deposit: (amount) => API.post('/portfolio/deposit', { amount }),
     getActivity: () => API.get('/portfolio/activity'),
+    getTransactions: () => API.get('/portfolio/transactions'),
 }
 
 export const signalsAPI = {

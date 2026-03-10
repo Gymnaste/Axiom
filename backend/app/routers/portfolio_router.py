@@ -102,3 +102,37 @@ def get_activity_logs(db: Session = Depends(get_db), user_id: str = Depends(get_
     from app.database import ActivityLog
     logs = db.query(ActivityLog).filter(ActivityLog.user_id == user_id).order_by(ActivityLog.timestamp.desc()).limit(20).all()
     return logs
+
+@router.get("/transactions")
+def get_transactions(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    """Récupère l'historique détaillé des achats et ventes."""
+    from app.database import Trade
+    trades = db.query(Trade).filter(Trade.user_id == user_id).order_by(Trade.entry_date.desc()).all()
+    
+    transactions = []
+    for t in trades:
+        # Achat
+        transactions.append({
+            "id": f"buy-{t.id}",
+            "type": "ACHAT",
+            "symbol": t.symbol,
+            "date": t.entry_date,
+            "price": t.entry_price,
+            "quantity": t.quantity,
+            "total": round(t.entry_price * t.quantity, 2)
+        })
+        # Vente (si fermé)
+        if t.status == "CLOSED" and t.exit_date:
+            transactions.append({
+                "id": f"sell-{t.id}",
+                "type": "VENTE",
+                "symbol": t.symbol,
+                "date": t.exit_date,
+                "price": t.exit_price,
+                "quantity": t.quantity,
+                "total": round((t.exit_price or 0) * t.quantity, 2)
+            })
+    
+    # Trier par date décroissante (les plus récents en premier)
+    transactions.sort(key=lambda x: x["date"], reverse=True)
+    return transactions
