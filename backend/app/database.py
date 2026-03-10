@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import (
     create_engine, Column, Integer, Float, String,
     DateTime, Boolean, Text, ForeignKey
@@ -44,7 +44,7 @@ class Portfolio(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(100), nullable=False, index=True, unique=True)
     capital = Column(Float, nullable=False, default=10000.0)
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Trade(Base):
@@ -58,7 +58,7 @@ class Trade(Base):
     exit_price = Column(Float, nullable=True)
     quantity = Column(Float, nullable=False)
     status = Column(String(10), nullable=False, default="OPEN")  # OPEN | CLOSED
-    entry_date = Column(DateTime, default=datetime.utcnow)
+    entry_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     exit_date = Column(DateTime, nullable=True)
     stop_loss = Column(Float, nullable=True)
     take_profit = Column(Float, nullable=True)
@@ -75,7 +75,7 @@ class ActivityLog(Base):
     user_id = Column(String(100), nullable=False, index=True)
     message = Column(Text, nullable=False)
     type = Column(String(20), default="INFO")  # INFO | BUY | SELL | ERROR
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     reference_id = Column(Integer, nullable=True) # ID du ChatMessage lié pour navigation
 
 
@@ -85,7 +85,7 @@ class PortfolioHistory(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(100), nullable=False, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     total_value = Column(Float, nullable=False)
     capital_liquide = Column(Float, nullable=True)
 
@@ -104,7 +104,7 @@ class NewsItem(Base):
     source_type = Column(String(20), default="RSS") # RSS | TWITTER
     importance_weight = Column(Float, default=1.0)
     raw_content = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ChatMessage(Base):
@@ -115,7 +115,7 @@ class ChatMessage(Base):
     user_id = Column(String(100), nullable=False, index=True)
     role = Column(String(20), nullable=False)  # user | assistant
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # ─────────────────────────────────────────────────────────────

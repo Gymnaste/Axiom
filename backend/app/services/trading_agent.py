@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, Trade, Portfolio, ActivityLog, NewsItem, ChatMessage
 from app.providers.market_provider import MarketProvider
@@ -203,7 +203,9 @@ class AutonomousTradingAgent:
                 timeout=40.0
             )
             if report_text:
-                now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+                # Correction fuseau horaire : UTC+1 pour l'affichage (France)
+                tz_paris = timezone(timedelta(hours=1))
+                now_str = datetime.now(tz_paris).strftime("%d/%m/%Y %H:%M")
                 new_msg = ChatMessage(
                     user_id=user_portfolio.user_id,
                     role="assistant",

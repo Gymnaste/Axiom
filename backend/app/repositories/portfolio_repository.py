@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.database import Portfolio, Trade, PortfolioHistory
 from app.core.logger import setup_logger
@@ -25,7 +25,7 @@ class PortfolioRepository:
     def update_capital(self, db: Session, user_id: str, new_capital: float):
         portfolio = self.get_or_create_portfolio(db, user_id)
         portfolio.capital = new_capital
-        portfolio.last_updated = datetime.utcnow()
+        portfolio.last_updated = datetime.now(timezone.utc)
         db.commit()
         db.refresh(portfolio)
         return portfolio
@@ -61,7 +61,7 @@ class TradeRepository:
         trade = db.query(Trade).filter(Trade.id == trade_id).first()
         if not trade: return None
         trade.exit_price = exit_price
-        trade.exit_date = datetime.utcnow()
+        trade.exit_date = datetime.now(timezone.utc)
         trade.status = "CLOSED"
         trade.pnl = (exit_price - trade.entry_price) * trade.quantity
         db.commit()
