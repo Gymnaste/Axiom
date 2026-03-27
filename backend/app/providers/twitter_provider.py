@@ -18,15 +18,19 @@ class TwitterProvider:
         results = []
         try:
             from playwright.async_api import async_playwright
-            # Fallback si stealth_async n'est pas dispo dans cette version de playwright-stealth
             try:
-                from playwright_stealth import stealth_async as stealth_func
+                import playwright_stealth
+                # On essaie de trouver la fonction la plus appropriée
+                if hasattr(playwright_stealth, "stealth_async"):
+                    stealth_func = playwright_stealth.stealth_async
+                elif hasattr(playwright_stealth, "stealth"):
+                    stealth_func = playwright_stealth.stealth
+                else:
+                    logger.warning("Aucune fonction stealth trouvée dans le module.")
+                    stealth_func = None
             except ImportError:
-                try:
-                    from playwright_stealth import stealth as stealth_func
-                except ImportError:
-                    logger.error("playwright-stealth n'est pas correctement installé.")
-                    return []
+                logger.warning("playwright-stealth n'est pas installé.")
+                stealth_func = None
         except ImportError:
             logger.error("Playwright n'est pas installé. Scraping Twitter désactivé.")
             return []
@@ -44,13 +48,14 @@ class TwitterProvider:
             page = await context.new_page()
             
             # Application du mode stealth (async ou sync selon la version)
-            try:
-                if asyncio.iscoroutinefunction(stealth_func):
-                    await stealth_func(page)
-                else:
-                    stealth_func(page)
-            except Exception as e:
-                logger.warning(f"Erreur lors de l'application du mode stealth : {e}")
+            if stealth_func:
+                try:
+                    if asyncio.iscoroutinefunction(stealth_func):
+                        await stealth_func(page)
+                    else:
+                        stealth_func(page)
+                except Exception as e:
+                    logger.warning(f"Erreur lors de l'application du mode stealth : {e}")
 
             url = f"https://syndication.twitter.com/srv/timeline-profile/screen-name/{target_user}"
             logger.info(f"Scraping tweets pour @{target_user} via {url}")

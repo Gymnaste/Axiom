@@ -54,6 +54,10 @@ origins = [
 ]
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/")
+async def root_welcome():
+    return {"message": "Axiom API is running", "status": "online"}
+
 app.include_router(portfolio_router.router)
 app.include_router(signal_router.router)
 app.include_router(news_router.router)

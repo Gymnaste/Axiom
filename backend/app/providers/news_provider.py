@@ -13,7 +13,7 @@ from app.core.logger import setup_logger
 logger = setup_logger("news_provider")
 
 RSS_FEEDS = [
-    "https://feeds.finance.yahoo.com/rss/2.0/headline",
+    "https://www.yahoo.com/news/rss/finance",
     "https://www.investing.com/rss/news.rss",
     "https://search.cnbc.com/rs/search/view.xml?partnerId=2000&keywords=stock%20market",
 ]
