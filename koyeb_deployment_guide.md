@@ -15,8 +15,10 @@ In the Koyeb dashboard, add the following environment variables:
 
 ## 2. Deployment Settings
 - **Service Type**: Web Service
-- **Build Method**: Build from GitHub
-- **Run Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8000` (ou laissez Koyeb détecter le Procfile)
+- **Build Method**: **Docker** (Très important !)
+- **Dockerfile path**: `backend/Dockerfile`
+- **Docker context**: `backend/`
+- **Run Command**: (Laissez vide, le Dockerfile s'en occupe)
 - **Instance Type**: Nano (Free)
 
 ## 3. Playwright Note
