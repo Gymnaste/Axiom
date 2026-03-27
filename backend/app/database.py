@@ -11,6 +11,12 @@ parsed_url = DATABASE_URL
 if parsed_url.startswith("postgres://"):
     parsed_url = parsed_url.replace("postgres://", "postgresql://", 1)
 
+# Fix pour Supabase pgbouncer=true qui fait planter psycopg2
+if "?pgbouncer=true" in parsed_url:
+    parsed_url = parsed_url.replace("?pgbouncer=true", "")
+elif "&pgbouncer=true" in parsed_url:
+    parsed_url = parsed_url.replace("&pgbouncer=true", "")
+
 # Configuration de l'Engine adaptée au moteur
 is_sqlite = parsed_url.startswith("sqlite")
 engine_args = {}

@@ -36,7 +36,7 @@ RSI_OVERSOLD: float = 30.0
 
 # News & Sentiment
 NEWS_RSS_FEEDS: list[str] = [
-    "https://www.yahoo.com/news/rss/finance",
+    "https://news.google.com/rss/search?q=stock+market+finance&hl=en-US&gl=US&ceid=US:en",
     "https://www.investing.com/rss/news.rss",
 ]
 
