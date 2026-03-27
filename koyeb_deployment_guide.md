@@ -15,9 +15,9 @@ In the Koyeb dashboard, add the following environment variables:
 
 ## 2. Deployment Settings
 - **Service Type**: Web Service
-- **Build Method**: **Docker** (Très important !)
-- **Dockerfile path**: `backend/Dockerfile`
-- **Docker context**: `backend/`
+- **Build Method**: **Docker**
+- **Dockerfile path**: `Dockerfile` (laisser par défaut)
+- **Docker context**: `.` (laisser par défaut)
 - **Run Command**: (Laissez vide, le Dockerfile s'en occupe)
 - **Instance Type**: Nano (Free)
 
