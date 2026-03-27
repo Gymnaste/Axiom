@@ -3,12 +3,8 @@ from app.config import DATABASE_URL
 from app.database import Base, engine as db_engine
 
 def migrate_db():
-    parsed_url = DATABASE_URL
-    if parsed_url.startswith("postgres://"):
-        parsed_url = parsed_url.replace("postgres://", "postgresql://", 1)
-    
-    print(f">>> DB DOCTOR: Vérification de la base de données... ({parsed_url.split('@')[-1] if '@' in parsed_url else 'SQLite'})")
-    engine = create_engine(parsed_url)
+    print(f">>> DB DOCTOR: Vérification de la base de données...")
+    engine = db_engine
     
     # 1. Création des tables manquantes
     try:
