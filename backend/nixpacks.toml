@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["...", "playwright"]
+nixPkgs = ["python3", "playwright"]
 
 [phases.build]
 cmds = ["pip install -r requirements.txt", "playwright install chromium"]
