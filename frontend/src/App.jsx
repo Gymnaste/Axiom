@@ -11,6 +11,7 @@ import { useAuth } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
+import DebugStatus from './components/DebugStatus'
 
 /** Redirige vers /login si l'utilisateur n'est pas connecté */
 function ProtectedRoute({ children }) {
@@ -31,6 +32,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
     return (
         <BrowserRouter>
+            <DebugStatus />
             <Routes>
                 {/* Landing page publique */}
                 <Route path="/" element={<LandingPage />} />

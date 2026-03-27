@@ -56,7 +56,7 @@ class TwitterProvider:
             logger.info(f"Scraping tweets pour @{target_user} via {url}")
 
             try:
-                await page.goto(url, wait_until="networkidle")
+                await page.goto(url, wait_until="networkidle", timeout=60000)
                 # Twitter Syndication renvoie du JSON ou du HTML simplifié
                 # On cherche les éléments de tweet
                 tweets = await page.query_selector_all('li.timeline-Tweet')
@@ -78,6 +78,7 @@ class TwitterProvider:
             except Exception as e:
                 logger.error(f"Erreur scraping Twitter pour {target_user}: {e}")
             finally:
+                await context.close()
                 await browser.close()
         
         return results

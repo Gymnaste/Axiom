@@ -4,12 +4,15 @@
  */
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+console.log(`Axiom API Service initialized with baseURL: ${API_URL}`);
+
 const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+    baseURL: API_URL,
     timeout: 120000,
 })
 
-console.log("Axiom API Service loaded - v1.1 (with getActivity)");
+console.log("Axiom API Service loaded - v1.2 (with enhanced diagnostics)");
 // Cache buster: 2026-03-05 14:26
 
 // Ajouter le token Supabase à chaque requête
@@ -33,6 +36,22 @@ API.interceptors.request.use(async (config) => {
     }
     return config;
 }, (error) => {
+    return Promise.reject(error);
+});
+
+// Intercepteur de réponses pour le debug et la gestion globale des erreurs
+API.interceptors.response.use((response) => {
+    return response;
+}, (error) => {
+    const originalRequest = error.config;
+    console.error(`[API ERROR] ${originalRequest.method.toUpperCase()} ${originalRequest.url}:`, error.message);
+    
+    if (error.code === 'ERR_NETWORK') {
+        console.error("ERREUR RÉSEAU : Impossible de contacter le backend. Vérifiez que le serveur est démarré et que l'URL est correcte.");
+    } else if (error.response) {
+        console.error(`Statut erreur : ${error.response.status}`, error.response.data);
+    }
+    
     return Promise.reject(error);
 });
 

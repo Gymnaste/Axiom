@@ -119,8 +119,11 @@ class AutonomousTradingAgent:
                 Trade.status == "OPEN"
             ).first()
             
-            price = self.market_provider.get_current_price(ticker_symbol)
-            if not price: continue
+            # Utilisation de to_thread pour éviter de bloquer l'event loop
+            price = await asyncio.to_thread(self.market_provider.get_current_price, ticker_symbol)
+            if not price: 
+                logger.warning(f"Impossible de récupérer le prix pour {ticker_symbol}")
+                continue
 
             # 3. Vérification SL/TP
             if existing_trade:
@@ -133,7 +136,7 @@ class AutonomousTradingAgent:
                 if closed_reason:
                     existing_trade.status = "CLOSED"
                     existing_trade.exit_price = price
-                    existing_trade.exit_date = datetime.utcnow()
+                    existing_trade.exit_date = datetime.now(timezone.utc)
                     trade_pnl = (price - existing_trade.entry_price) * existing_trade.quantity
                     existing_trade.pnl = trade_pnl
                     user_portfolio.capital += (price * existing_trade.quantity)
@@ -144,8 +147,10 @@ class AutonomousTradingAgent:
             # 4. Consultation IA avec timeout
             try:
                 # Collecter contexte technique
-                df = self.market_provider.get_historical_data(ticker_symbol, period="1mo")
-                if df.empty: continue
+                df = await asyncio.to_thread(self.market_provider.get_historical_data, ticker_symbol, period="1mo")
+                if df.empty: 
+                    logger.warning(f"Pas de données historiques pour {ticker_symbol}")
+                    continue
                 
                 # Collecter historique perf
                 from app.repositories.portfolio_repository import TradeRepository
